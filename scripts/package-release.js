@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import JSZip from 'jszip';
+import {walk} from './private-data-tools.js';
+const version=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+const folder=path.resolve('public-release/package-'+Date.now());
+const run=spawnSync(process.execPath,['scripts/privacy.js','release','--target',folder],{stdio:'inherit'});
+if(run.status!==0)process.exit(run.status||1);
+const zip=new JSZip();for(const file of walk(folder))zip.file(path.relative(folder,file).replaceAll('\\','/'),fs.readFileSync(file));
+fs.mkdirSync('release',{recursive:true});const file=path.resolve('release/factory-production-web-v'+version+'.zip');const bytes=await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'});fs.writeFileSync(file,bytes);fs.writeFileSync('release/SHA256SUMS.txt',createHash('sha256').update(bytes).digest('hex')+'  '+path.basename(file)+'\n');console.log(file);

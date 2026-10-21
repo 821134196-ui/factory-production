@@ -1,0 +1,44 @@
+{
+  "name": "factory-production",
+  "version": "1.8.4",
+  "private": true,
+  "description": "工厂生产填写与统计网页版及微信小程序",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "start:local": "node --env-file=.env.local server/index.js",
+    "backup:local": "node --env-file=.env.local scripts/backup.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "test:docker": "node scripts/test-docker.js",
+    "check": "node scripts/check.js",
+    "check:native": "node scripts/compile-native.js",
+    "backup": "node --env-file-if-exists=.env scripts/backup.js",
+    "data:preview": "node --env-file-if-exists=.env scripts/replace-workbook-data.js",
+    "data:replace": "node --env-file-if-exists=.env scripts/replace-workbook-data.js --apply",
+    "secret": "node scripts/generate-secret.js",
+    "release": "node scripts/package-release.js",
+    "stock:preview": "node --env-file-if-exists=.env scripts/import-opening-stock.js",
+    "stock:import": "node --env-file-if-exists=.env scripts/import-opening-stock.js --apply",
+    "stock:import:local": "node --env-file=.env.local scripts/import-opening-stock.js --apply",
+    "privacy:backup": "node --env-file-if-exists=.env scripts/privacy.js backup",
+    "privacy:restore": "node scripts/privacy.js restore",
+    "privacy:check": "node scripts/privacy.js check",
+    "privacy:release": "node scripts/privacy.js release",
+    "test:public": "node --test tests/public-*.test.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "jszip": "^3.10.2",
+    "tencentcloud-sdk-nodejs-sms": "4.1.306"
+  },
+  "overrides": {
+    "uuid": "^11.1.1",
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
+  }
+}

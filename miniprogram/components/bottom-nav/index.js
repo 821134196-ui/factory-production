@@ -1,0 +1,2 @@
+const permissions=require('../../utils/permissions');
+Component({properties:{user:{type:Object,value:null},role:{type:String,value:'worker'},current:String,fontSize:{type:Number,value:22}},observers:{'user, role'(user,role){this.setData({items:permissions.nav(user||{role}).map(item=>({...item,iconName:item.id==='home'&&user?.role==='admin'?'stats':item.id==='records'&&permissions.can(user,'review')?'review':item.id}))});}},methods:{navigate(e){const page=e.currentTarget.dataset.page;if(page!==this.data.current)wx.reLaunch({url:'/pages/'+page+'/index'});}}});

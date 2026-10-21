@@ -1,0 +1,9 @@
+{
+  "description": "生产统计小程序第一版",
+  "appid": "touristappid",
+  "projectname": "factory-production",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "miniprogram/",
+  "setting": { "urlCheck": false, "es6": true, "enhance": true, "postcss": true, "minified": true },
+  "libVersion": "3.7.12"
+}

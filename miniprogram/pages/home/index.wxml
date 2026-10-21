@@ -1,0 +1,73 @@
+<view class="page-shell" style="font-size:{{fontSize}}px">
+  <page-head title="我的" subtitle="{{subtitle}}" demo="{{demoMode}}"/>
+  <block wx:if="{{user.role==='worker'&&overview}}">
+    <view class="tabs">
+      <button class="{{workerPeriod==='day'?'active':''}}" data-value="day" bindtap="workerPeriod">今天</button>
+      <button class="{{workerPeriod==='month'?'active':''}}" data-value="month" bindtap="workerPeriod">本月</button>
+      <button class="{{workerPeriod==='custom'?'active':''}}" data-value="custom" bindtap="workerPeriod">自定义</button>
+    </view>
+    <view wx:if="{{workerPeriod==='day'}}" class="field">
+      <view class="field-label">生产日期</view>
+      <nice-select options="{{dates}}" value="{{summaryDate}}" font-size="{{fontSize}}" bindchange="summaryDate"/>
+    </view>
+    <view wx:if="{{workerPeriod==='custom'}}" class="card">
+      <view class="field">
+        <view class="field-label">开始日期</view>
+        <picker mode="date" value="{{customFrom}}" end="{{today}}" data-key="customFrom" bindchange="customDate"><view class="date-choice">{{customFrom}}</view></picker>
+      </view>
+      <view class="field">
+        <view class="field-label">结束日期</view>
+        <picker mode="date" value="{{customTo}}" end="{{today}}" data-key="customTo" bindchange="customDate"><view class="date-choice">{{customTo}}</view></picker>
+      </view>
+      <button class="soft" bindtap="customRange">查看</button>
+    </view>
+    <view class="work-summary">
+      <block wx:for="{{overview.detailMetrics}}" wx:key="name" wx:for-item="metric">
+        <block wx:if="{{metric.name==='装车'||metric.name==='卸车'}}">
+          <view class="card work-operation-row">
+            <text>{{metric.name}}</text>
+            <text class="strong"><text wx:if="{{metric.name==='卸车'&&metric.items[0].countText}}">{{metric.items[0].countText}} </text>{{metric.items[0].quantityText}} {{metric.items[0].unit}}</text>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="card work-category">
+            <view class="title">{{metric.name}}{{metric.isGroupTotal?'（参与班组）':''}}</view>
+            <view wx:for="{{metric.items}}" wx:for-item="detail" wx:key="id" class="work-detail-row">
+              <view wx:if="{{metric.name==='预制块'}}" class="work-product-label">
+                <text class="work-product-name">{{detail.productTitle||detail.name}}</text>
+                <text wx:if="{{detail.productDetail||detail.isGroupTotal}}" class="work-product-type">{{detail.productDetail}}{{detail.isGroupTotal?' · 班组合计':''}}</text>
+              </view>
+              <text wx:else>{{detail.name}}</text>
+              <view class="work-detail-values">
+                <text class="strong">{{detail.quantityText}} {{detail.unit}}</text>
+                <text wx:if="{{metric.name==='预制块'&&detail.weightText}}" class="small work-weight">折合 {{detail.weightText}}</text>
+              </view>
+            </view>
+          </view>
+        </block>
+      </block>
+      <view wx:if="{{!overview.detailMetrics.length}}" class="empty">所选日期暂无生产</view>
+    </view>
+    <view wx:if="{{wages}}" class="card personal-wages">
+      <view class="title">我的工资</view>
+      <view class="summary"><text>工资合计</text><text class="wage-total">{{wages.totalText}}</text></view>
+      <button class="soft" bindtap="wages">工资明细</button>
+    </view>
+    <block wx:if="{{user.isLeader}}">
+      <view class="section-heading"><view class="title">组员生产</view><button class="text-action" bindtap="bulkReport">批量填写</button></view>
+      <view wx:for="{{overview.people}}" wx:key="id" class="crew-person">
+        <button class="disclosure-trigger" data-id="{{item.id}}" bindtap="person">{{item.name}} <text>{{item.expanded?'⌃':'⌄'}}</text></button>
+        <view wx:if="{{item.expanded}}" class="card">
+          <button wx:for="{{item.metrics}}" wx:for-item="metric" wx:key="name" class="crew-metric-row" data-id="{{item.id}}" data-business="{{metric.name}}" bindtap="member"><text>{{metric.name}}{{metric.isGroupTotal?'（参与班组）':''}}</text><text class="strong">{{metric.quantityText}} {{metric.unit}}</text><image class="row-chevron" src="/assets/icons/right.svg"/></button>
+        </view>
+      </view>
+      <view wx:if="{{!overview.people.length}}" class="empty">给组员填写后，这里可查看他们的生产。</view>
+      <view wx:if="{{memberName}}" class="card">
+        <view class="record-head"><text>{{memberName}}的生产</text><button class="text-action" bindtap="closeMember">收起</button></view>
+        <view wx:for="{{memberRecords}}" wx:key="id" class="history"><view>{{item.product.fullName}} · {{item.quantityText}} {{item.product.unit}}</view><view class="small">{{item.date}} · {{item.excludedReason?'已替换':item.statusText}}</view></view>
+      </view>
+    </block>
+  </block>
+  <admin-reports wx:if="{{user.role==='admin'}}" user="{{user}}" today="{{today}}" groups="{{groups}}" font-size="{{fontSize}}"/>
+  <bottom-nav user="{{user}}" current="home" font-size="{{fontSize}}"/>
+</view>

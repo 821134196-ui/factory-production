@@ -1,0 +1,33 @@
+{
+  "pages": [
+    "pages/login/index",
+    "pages/home/index",
+    "pages/report/index",
+    "pages/records/index",
+    "pages/detail/index",
+    "pages/manage/index",
+    "pages/settings/index",
+    "pages/notices/index",
+    "pages/history/index",
+    "pages/wages/index",
+    "pages/inventory/index",
+    "pages/stocktake/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "生产记工",
+    "navigationBarBackgroundColor": "#f6f7f8",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6f7f8",
+    "enablePullDownRefresh": true
+  },
+  "usingComponents": {
+    "page-head": "/components/page-head/index",
+    "bottom-nav": "/components/bottom-nav/index",
+    "range-filter": "/components/range-filter/index",
+    "nice-select": "/components/nice-select/index",
+    "admin-reports": "/components/admin-reports/index"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

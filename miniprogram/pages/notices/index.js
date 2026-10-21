@@ -1,0 +1,2 @@
+const api=require('../../utils/api'),ui=require('../../utils/screen');
+Page({data:{fontSize:22,busy:false,notices:[]},onShow(){ui.run(this,async()=>{const b=await ui.bootstrap(this);if(!b)return;const r=await api.request('/notices');this.setData({notices:r.notices.map(n=>Object.assign({},n,{timeText:ui.time(n.created_at)}))});await api.request('/notices/read','POST');});},detail(e){wx.navigateTo({url:'/pages/detail/index?id='+e.currentTarget.dataset.id});},back(){wx.navigateBack();},onPullDownRefresh(){this.onShow();}});

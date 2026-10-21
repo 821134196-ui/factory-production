@@ -1,0 +1,37 @@
+name: factory-production
+services:
+  app:
+    build: .
+    image: factory-production-web:1.8.4
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: ${APP_ENV_FILE:-.env.docker}
+        required: false
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3188
+      DEMO_MODE: "false"
+      AUTH_MODE: sms
+      PRIVATE_DATA_DIR: /app/private-data
+      DB_PATH: /app/data/production.sqlite
+      BACKUP_DIR: /app/backups
+    volumes:
+      - type: bind
+        source: ${PRIVATE_DATA_HOST_DIR:-./private-data}
+        target: /app/private-data
+        read_only: true
+      - production_data:/app/data
+      - production_backups:/app/backups
+    ports:
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:3188"
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  production_data:
+  production_backups:

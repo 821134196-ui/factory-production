@@ -1,0 +1,17 @@
+const api=require('../../utils/api'),ui=require('../../utils/screen');
+Page({data:{fontSize:22,busy:false,records:[],groups:[],workers:[],limit:30,batchReview:false,selectedCount:0,pendingCount:0,allSelected:false},
+ onShow(){ui.run(this,async()=>{const b=await ui.bootstrap(this,'read');if(!b)return;this.setData({today:b.today,groups:b.groups,workers:b.workers});if(!this.filters)this.filters={from:b.user.role==='admin'?b.today.slice(0,7)+'-01':b.today,to:b.today};this.selection=this.selection||new Map();await this.load();});},
+ async load(){const r=await api.request('/records?'+api.query(this.filters));const rows=r.records.map(r=>ui.record(r,this.boot));this.all=this.data.user?.role==='worker'?rows.filter(r=>!r.excludedReason):rows;const versions=new Map(this.all.filter(r=>r.status==='pending').map(r=>[r.id,r.version]));for(const [id,version] of this.selection)if(versions.get(id)!==version)this.selection.delete(id);if(!ui.can(this.data.user,'review')){this.selection.clear();this.setData({batchReview:false});}this.syncSelection();this.setData({count:this.all.length});},
+ syncSelection(){const records=this.all.slice(0,this.data.limit).map(r=>({...r,selected:this.selection.has(r.id)})),pending=records.filter(r=>r.status==='pending');this.setData({records,selectedCount:this.selection.size,pendingCount:pending.length,allSelected:pending.length>0&&pending.every(r=>this.selection.has(r.id)),batchReview:this.data.batchReview&&this.all.some(r=>r.status==='pending')});},
+ filter(e){this.filters=e.detail;this.selection.clear();this.setData({limit:30});ui.run(this,()=>this.load());},
+ batchMode(){this.selection.clear();this.setData({batchReview:!this.data.batchReview});this.syncSelection();},
+ selectRecord(e){const r=this.all.find(r=>r.id===e.currentTarget.dataset.id);if(!r||r.status!=='pending'||this.data.busy)return;if(e.detail.value.length){if(this.selection.size>=200){ui.toast('每次最多确认200条');this.syncSelection();return;}this.selection.set(r.id,r.version);}else this.selection.delete(r.id);this.syncSelection();},
+ selectAll(){const pending=this.data.records.filter(r=>r.status==='pending');if(this.data.allSelected)pending.forEach(r=>this.selection.delete(r.id));else for(const r of pending){if(this.selection.size>=200)break;this.selection.set(r.id,r.version);}this.syncSelection();},
+ approve(e){ui.run(this,async()=>{try{await api.request('/records/'+e.currentTarget.dataset.id,'PATCH',{action:'approve',version:Number(e.currentTarget.dataset.version)});ui.toast('已确认');}finally{await this.load();}});},
+ batchConfirm(){ui.run(this,async()=>{const entries=[...this.selection].map(([id,version])=>({id,version}));if(!entries.length)throw new Error('请选择待确认记录');if(!await ui.confirm('批量核对','确认选中的'+entries.length+'条生产记录？核对前后的产量和工资均实时计算。'))return;try{const r=await api.request('/records/approve-batch','POST',{records:entries});this.selection.clear();ui.toast('已确认'+r.approvedCount+'条');}finally{await this.load();}});},
+ stocktake(){wx.navigateTo({url:'/pages/stocktake/index'});},
+ export(){wx.showActionSheet({itemList:['导出月报预制块','导出月报浇注料'],success:r=>ui.run(this,()=>api.exportFile({month:(this.filters.from||this.boot.today).slice(0,7),category:r.tapIndex===0?'预制块':'浇注料'},'/export-template'))});},
+ more(){this.setData({limit:this.data.limit+30});this.syncSelection();},
+ detail(e){wx.navigateTo({url:'/pages/detail/index?id='+e.currentTarget.dataset.id});},
+ onPullDownRefresh(){this.onShow();}
+});

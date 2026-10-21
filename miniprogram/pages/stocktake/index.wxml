@@ -1,0 +1,33 @@
+<view class="page-shell" style="font-size:{{fontSize}}px">
+ <page-head title="月度盘点" subtitle="{{subtitle}}"/>
+ <block wx:if="{{!detail}}">
+  <button class="text-action" bindtap="back">返回生产记录</button><view class="small space">{{month}}</view>
+  <view class="stocktake-summary">
+   <button class="stocktake-state pending {{status==='pending'?'active':''}}" data-value="pending" bindtap="status" aria-label="待盘点 {{pendingCount}}项"><text class="stocktake-state-name">待盘点</text><text class="stocktake-state-count">{{pendingCount}}</text><text wx:if="{{status==='pending'}}" class="stocktake-selected">✓</text></button>
+   <button class="stocktake-state confirmed {{status==='confirmed'?'active':''}}" data-value="confirmed" bindtap="status" aria-label="已确认 {{confirmedCount}}项"><text class="stocktake-state-name">已确认</text><text class="stocktake-state-count">{{confirmedCount}}</text><text wx:if="{{status==='confirmed'}}" class="stocktake-selected">✓</text></button>
+   <button class="stocktake-state error {{status==='error'?'active':''}}" data-value="error" bindtap="status" aria-label="错误 {{errorCount}}项"><text class="stocktake-state-name">错误</text><text class="stocktake-state-count">{{errorCount}}</text><text wx:if="{{status==='error'}}" class="stocktake-selected">✓</text></button>
+  </view>
+  <view class="tabs"><button class="{{!category?'active':''}}" data-value="" bindtap="category">全部</button><button class="{{category==='预制块'?'active':''}}" data-value="预制块" bindtap="category">预制块</button><button class="{{category==='浇注料'?'active':''}}" data-value="浇注料" bindtap="category">浇注料</button></view>
+  <input class="space" value="{{keyword}}" bindinput="search" placeholder="查找产品"/>
+  <view class="small stocktake-period-note">当月库存＝本月生产－发货<view>{{currentRange.from}} 至 {{currentRange.to}}</view></view>
+  <view wx:for="{{rows}}" wx:key="product.id" class="card stocktake-card">
+   <view class="stocktake-card-head"><view class="stocktake-badge {{item.status}}"><image src="{{item.statusIcon}}"/>{{item.statusText}}</view><text wx:if="{{item.stale}}" class="stocktake-updated">数据已更新，需重新盘点</text></view>
+   <button class="stocktake-card-product" data-id="{{item.product.id}}" bindtap="detail"><view class="stocktake-product-copy"><view class="strong">{{item.product.productTitle}}</view><view wx:if="{{item.product.productDetail}}" class="small">{{item.product.productDetail}}</view></view></button>
+   <view class="stocktake-balances">
+    <button class="stocktake-balance" data-id="{{item.product.id}}" data-view="previous" bindtap="detail"><text class="small">上月剩余库存</text><text class="strong">{{item.balanceText}} ›</text></button>
+    <button class="stocktake-balance" data-id="{{item.product.id}}" data-view="month" bindtap="detail"><text class="small">当月库存</text><text class="strong">{{item.changeText}} ›</text></button>
+    <button class="stocktake-balance stocktake-current" data-id="{{item.product.id}}" data-view="current" bindtap="detail"><text class="small">当前剩余库存</text><text class="strong">{{item.currentBalanceText}} ›</text></button>
+   </view>
+   <view wx:if="{{item.status!=='pending'&&item.reviewedBy}}" class="stocktake-reviewed"><text>{{item.status==='confirmed'?'确认人':'标记人'}}：{{item.reviewedBy}}</text><text>{{item.reviewedTime}}</text></view>
+   <view wx:if="{{item.status==='pending'}}" class="stocktake-actions"><button class="stocktake-error" data-id="{{item.product.id}}" data-status="error" disabled="{{busy}}" bindtap="mark">标记错误</button><button class="primary stocktake-confirm" data-id="{{item.product.id}}" data-status="confirmed" disabled="{{busy||item.balance===null}}" bindtap="mark">确认无误</button></view>
+  </view>
+  <view wx:if="{{!rows.length}}" class="empty">{{emptyText}}</view>
+ </block>
+ <view wx:if="{{detail}}"><button class="soft" bindtap="close">返回产品列表</button><view class="card stocktake-detail-card"><view class="title">{{detail.product.productTitle}}</view><view wx:if="{{detail.product.productDetail}}" class="small">{{detail.product.productDetail}}</view><view class="small space">{{detail.detailTitle}}</view>
+  <view class="stocktake-detail-head"><text class="small">{{detail.from}} 至 {{detail.to}}</text><view wx:if="{{detail.view==='previous'}}" class="stocktake-badge {{detail.review.status}}"><image src="{{detail.statusIcon}}"/>{{detail.statusText}}</view></view>
+  <view wx:if="{{detail.view==='previous'&&detail.review.status!=='pending'&&detail.review.reviewedBy}}" class="stocktake-reviewed"><text>{{detail.review.status==='confirmed'?'确认人':'标记人'}}：{{detail.review.reviewedBy}}</text><text>{{detail.reviewedTime}}</text></view><view wx:if="{{detail.view==='previous'&&detail.review.stale}}" class="stocktake-updated">数据已更新，请重新盘点</view>
+  <view wx:if="{{detail.view==='month'}}" class="small stocktake-period-note">当月库存＝本月生产－发货，不含月初库存。</view><view wx:else class="summary stocktake-opening"><text>月初库存</text><text class="strong">{{detail.openingText}}</text></view>
+  <view wx:if="{{detail.view!=='previous'}}" class="stocktake-totals"><view class="summary"><text>本月生产</text><text class="strong">{{detail.producedText}}</text></view><view class="summary"><text>本月发货</text><text class="strong">{{detail.shippedText}}</text></view></view>
+  <view class="stocktake-timeline"><view wx:for="{{detail.flows}}" wx:key="index" class="stocktake-flow"><button class="stocktake-product" data-index="{{index}}" bindtap="expand"><view><view>{{item.date}}</view><view class="small">{{item.kind==='production'?'生产':item.customer+' · 发货'}}</view></view><view><view class="strong">{{item.kind==='production'?'+':'−'}}{{item.quantityText}}</view><view class="small">{{detail.view==='month'?'累计净增':'结存'}} {{item.balanceText}} {{item.expanded?'⌃':'⌄'}}</view></view></button><view wx:if="{{item.expanded}}" class="stocktake-flow-body"><view wx:for="{{item.records}}" wx:for-item="record" wx:key="id" class="summary"><view><view>{{record.names}}</view><view wx:if="{{record.submittedName}}" class="small">填写人：{{record.submittedName}}</view></view><text class="strong">{{record.quantityText}}</text></view><view wx:if="{{item.kind==='shipment'}}">客户：{{item.customer}}</view></view></view><view wx:if="{{!detail.flows.length}}" class="empty">本月暂无生产和发货记录</view></view>
+  <view class="summary"><text>{{detail.view==='previous'?'上月剩余库存':detail.view==='month'?'当月库存':'当前剩余库存'}}</text><text class="strong">{{detail.balanceText}}</text></view><button wx:if="{{detail.view==='previous'&&detail.review.status!=='pending'}}" class="secondary stocktake-reopen" disabled="{{busy}}" bindtap="reopen">重新盘点</button></view></view>
+</view>

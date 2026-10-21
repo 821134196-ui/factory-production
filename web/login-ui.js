@@ -1,0 +1,3 @@
+let sendAgainAt=0,sentPhone='',timer;
+export function updateCodeButton(busy=false){const button=document.querySelector('[data-action=send-code]');if(!button)return;const phone=document.querySelector('#phone')?.value,seconds=phone===sentPhone?Math.max(0,Math.ceil((sendAgainAt-Date.now())/1000)):0;button.disabled=busy||seconds>0;button.textContent=seconds?`${seconds}秒后重发`:'获取验证码';}
+export function startCodeCountdown(phone){sentPhone=phone;sendAgainAt=Date.now()+60000;clearInterval(timer);timer=setInterval(()=>{updateCodeButton();if(Date.now()>=sendAgainAt){clearInterval(timer);timer=null;}},1000);updateCodeButton();}

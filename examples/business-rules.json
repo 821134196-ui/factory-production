@@ -1,0 +1,14 @@
+{
+  "aliases": {},
+  "crewLeaders": [],
+  "wagePolicy": {
+    "precastMode": "crew",
+    "precastRate": 0,
+    "materialMultiplier": 1,
+    "supplementsConfirmed": false
+  },
+  "supplementRates": {
+    "small": 0,
+    "tonnage": 0
+  }
+}

@@ -1,0 +1,1 @@
+Component({properties:{title:String,subtitle:String,demo:Boolean,settings:{type:Boolean,value:true}},methods:{openSettings(){wx.navigateTo({url:'/pages/settings/index'});}}});

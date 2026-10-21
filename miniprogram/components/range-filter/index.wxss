@@ -1,0 +1,1 @@
+.filter-grid{display:flex;gap:10px;flex-wrap:wrap}.filter-grid>picker,.filter-grid>.field{width:100%;margin-bottom:0}.filter-grid .picker{font-size:.85em;overflow-wrap:anywhere}
