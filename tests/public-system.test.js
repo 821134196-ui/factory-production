@@ -11,8 +11,8 @@ await writeFixtures(folder,{templates:true});process.env.PRIVATE_DATA_DIR=folder
 const {createApp}=await import('../server/app.js'),{configFromEnv}=await import('../server/config.js'),{today}=await import('../server/db.js');
 after(()=>{fs.rmSync(folder,{recursive:true,force:true});});
 function config(){return {...configFromEnv({AUTH_MODE:'sms',APP_SECRET:'synthetic-test-secret-'.repeat(3),ADMIN_PHONE:phones.admin,OFFICIAL_ROSTER:'true',SMS_PROVIDER:'webhook',SMS_WEBHOOK_URL:'https://sms.example.invalid/send'}),dbPath:':memory:'};}
-async function fixture(t,{failSend=false}={}){
- const outbox=new Map(),f=createApp(config(),{sendSms:async(phone,code)=>{if(failSend)throw new Error('test provider failure');outbox.set(phone,code);}});
+async function fixture(t,{failSend=false,universalLoginCode=''}={}){
+ const outbox=new Map(),f=createApp({...config(),universalLoginCode},{sendSms:async(phone,code)=>{if(failSend)throw new Error('test provider failure');outbox.set(phone,code);}});
  const server=f.app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
  t.after(async()=>{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));f.db.close();});
  const base='http://127.0.0.1:'+server.address().port;
@@ -37,6 +37,23 @@ test('仅短信登录，随机验证码单次使用，无公开账号或私有�
 });
 test('短信发送失败不产生可用验证码',async t=>{
  const f=await fixture(t,{failSend:true});assert.equal((await f.req('/api/auth/code',null,'POST',{phone:phones.worker})).status,502);assert.equal(f.db.prepare('SELECT count(*) n FROM codes').get().n,0);
+});
+test('固定验证码仅在配置后生效，允许启用账号登录并保留短信登录',async t=>{
+ const disabled=await fixture(t);
+ assert.equal((await disabled.req('/api/auth/login',null,'POST',{phone:phones.worker,code:'666888'})).status,400);
+ const f=await fixture(t,{universalLoginCode:'666888'});
+ for(const phone of [phones.admin,phones.leader,phones.worker]){
+  const r=await f.req('/api/auth/login',null,'POST',{phone,code:'666888'});
+  assert.equal(r.status,200);assert.equal(r.data.user.id,f.person(phone).id);
+  assert.equal((await f.req('/api/bootstrap',r.data.token)).status,200);
+ }
+ assert.equal(f.outbox.size,0);
+ assert.equal((await f.req('/api/auth/login',null,'POST',{phone:phones.worker,code:'666889'})).status,400);
+ assert.equal((await f.req('/api/auth/login',null,'POST',{phone:'19999999999',code:'666888'})).status,403);
+ f.db.prepare('UPDATE users SET active=0 WHERE phone=?').run(phones.other);
+ assert.equal((await f.req('/api/auth/login',null,'POST',{phone:phones.other,code:'666888'})).status,403);
+ await f.login(phones.worker);
+ assert.throws(()=>configFromEnv({UNIVERSAL_LOGIN_CODE:'123'}),/6位数字/);
 });
 test('组长批量填写、同人同日同料覆盖、本人可见范围和实时工资',async t=>{
  const f=await fixture(t),leader=await f.login(phones.leader),worker=await f.login(phones.worker),other=await f.login(phones.other);

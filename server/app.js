@@ -46,8 +46,11 @@ export function createApp(config,{sendSms=createSmsSender(config)}={}){
  });
  app.post('/api/auth/login',(req,res)=>{
   const phone=text(req.body.phone,'手机号',11),code=text(req.body.code,'验证码',6),entry=db.prepare('SELECT * FROM codes WHERE phone=?').get(phone);
+  const universal=!!config.universalLoginCode&&timingSafeEqual(Buffer.from(hash(code)),Buffer.from(hash(config.universalLoginCode)));
+  if(!universal){
   if(!entry||entry.consumed||entry.attempts>=5||entry.expires_at<Date.now())fail(400,'验证码失效，请重新获取');
   const actual=hash(phone+':'+code);if(!timingSafeEqual(Buffer.from(actual),Buffer.from(entry.code_hash))){db.prepare('UPDATE codes SET attempts=attempts+1 WHERE phone=?').run(phone);fail(400,'验证码不正确');}
+  }
   const user=db.prepare('SELECT * FROM users WHERE phone=? AND active=1').get(phone);if(!user)fail(403,'账号已停用');
   const token=randomBytes(32).toString('hex');db.prepare('UPDATE codes SET consumed=1 WHERE phone=?').run(phone);db.prepare('DELETE FROM sessions WHERE expires_at<?').run(Date.now());db.prepare('INSERT INTO sessions VALUES (?,?,?)').run(hash(token),user.id,Date.now()+30*864e5);res.json({token,user:userView(user)});
  });

@@ -7,6 +7,7 @@ export function configFromEnv(env = process.env) {
     factoryName: env.FACTORY_NAME || '工厂生产记工',
     dbPath: path.resolve(env.DB_PATH || './data/production.sqlite'),
     secret: env.APP_SECRET || '',
+    universalLoginCode: env.UNIVERSAL_LOGIN_CODE || '',
     adminPhone: env.ADMIN_PHONE || '',
     officialRoster: env.OFFICIAL_ROSTER==='true',
     smsUrl: env.SMS_WEBHOOK_URL || '', smsToken: env.SMS_WEBHOOK_TOKEN || '',
@@ -19,6 +20,7 @@ export function configFromEnv(env = process.env) {
     },
     trustProxy: Number(env.TRUST_PROXY || 0)
   };
+  if (config.universalLoginCode && !/^\d{6}$/.test(config.universalLoginCode)) throw new Error('UNIVERSAL_LOGIN_CODE需为6位数字。');
   if (!['webhook','tencent'].includes(config.smsProvider)) throw new Error('SMS_PROVIDER需为tencent或webhook。');
   if (!['code','code,minutes'].includes(config.tencentSms.templateParams)) throw new Error('TENCENT_SMS_TEMPLATE_PARAMS需为code或code,minutes，与已审核模板变量对应。');
   if (config.secret.length < 32 || !/^1\d{10}$/.test(config.adminPhone)) throw new Error('正式模式需配置至少32位APP_SECRET及ADMIN_PHONE。');
