@@ -8,6 +8,36 @@ PRIVATE_DATA_HOST_DIR 默认为项目下的 private-data，Compose 将其只读�
 
 ## 从本地系统迁移
 
+推荐使用单文件初始化脚本。在本地执行 npm run privacy:init-script，将 private-data/恢复初始化数据.cjs 单独传到 Linux 上新拉取的项目根目录。以下命令以服务器 root 用户执行；已有数据的部署请继续使用原目录，不要再次初始化。
+
+服务器已安装 Node.js 22.13 以上：
+
+```sh
+node 恢复初始化数据.cjs --docker
+docker compose up -d --build --wait
+```
+
+服务器只安装了 Docker 时，也可以直接用 Node 容器执行恢复：
+
+```sh
+docker run --rm --user 0:0 -v "$PWD:/restore" -w /restore node:22-alpine node 恢复初始化数据.cjs --docker
+docker compose up -d --build --wait
+```
+
+然后访问 http://服务器IP:8080；服务器需允许访问此端口。脚本会恢复业务数据和短信密钥，自动生成 .env、.env.docker 及 compose.override.yaml，并为应用容器用户 UID 1000 设置数据与模板权限。此模式通过本地覆盖配置将 ./data 挂载到 /app/data，直接使用已恢复的数据库；备份仍使用独立卷。重建容器不会清空宿主机数据。不要删除 data/、private-data/ 或 compose.override.yaml。
+
+短信配置文件权限为 600，业务目录权限为 700；非 root 用户可用 sudo 执行上述恢复和启动命令。脚本遇到已有数据、配置或覆盖文件会停止。私有脚本、配置、覆盖文件均被 Git 和 Docker 构建忽略。
+
+如果使用 HTTPS，显式指定配置文件时也要带上恢复生成的覆盖配置：
+
+```sh
+docker compose -f compose.yaml -f compose.override.yaml -f compose.https.yaml up -d --build --wait
+```
+
+在 .env 中设置 SITE_DOMAIN 和 ACME_EMAIL 后执行该命令。
+
+也可以继续使用完整 ZIP 包迁移：
+
 1. 本地执行 npm run privacy:backup，得到 backups 下的私有 ZIP 包。
 2. 将代码与私有包分开传到服务器。在一个新的项目目录执行 node scripts/privacy.js restore --from 备份包路径 --target 新目录。
 3. 在新目录安装代码后，保留恢复出的 private-data。根据 .env.docker.example 配置 .env.docker，并沿用原 APP_SECRET。

@@ -1,5 +1,4 @@
 <view class="page-shell" style="font-size:{{fontSize}}px">
- <page-head title="月度盘点" subtitle="{{subtitle}}"/>
  <block wx:if="{{!detail}}">
   <button class="text-action" bindtap="back">返回生产记录</button><view class="small space">{{month}}</view>
   <view class="stocktake-summary">

@@ -1,0 +1,276 @@
+/* Keep the first screen for the task, with settings only on My page. */
+.body{padding-top:max(12px,env(safe-area-inset-top));padding-left:16px;padding-right:16px}
+.role-guest .body{padding-top:max(20px,env(safe-area-inset-top))}
+.home-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;min-width:0}
+.home-toolbar>.tabs{flex:1;min-width:0;margin:0;flex-wrap:nowrap;gap:2px}
+.home-toolbar>.tabs>button{min-width:0;padding:8px 0;min-height:44px;font-size:max(18px,.8em);white-space:nowrap}
+.my-settings{display:flex;align-items:center;justify-content:center;gap:5px;flex:none;min-height:44px;margin:0;padding:8px 0 8px 6px;background:transparent;color:var(--sub);font-size:max(18px,.78em);font-weight:500;white-space:nowrap}
+.my-settings .app-icon{width:20px;height:20px}
+.settings-only{justify-content:flex-end}
+.field.summary-date-field{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
+.summary-date-field>span{margin:0}
+.summary-date-field .select-menu summary{min-height:52px;padding:8px 12px}
+.personal-wages>h2{margin-bottom:8px}
+.personal-wages .wage-personal>.summary{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;padding:6px 0 12px}
+.personal-wages .summary>.wage-total{margin:0}
+.admin-home-toolbar .report-view-tabs .app-icon{display:none}
+.login-heading{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.login-heading .login-icon{width:44px;height:44px;border-radius:12px;margin:0;flex:none}
+.login-heading h1{font-size:1.1em;line-height:1.4;margin:0;letter-spacing:0}
+.login-card .field{margin-bottom:16px}
+.login-card .login-code-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch;margin:0;font-size:1em;font-weight:400}
+.login-code-row>input{min-width:0;padding:12px 10px;font-size:1em}
+.login-code-row>button{margin:0;padding:10px;font-size:max(18px,.75em);min-height:56px}
+#code-help{margin:0 0 16px;color:var(--brand)}
+#code-help:empty{display:none}
+.login-card .primary{width:100%;margin:4px 0 0}
+.card{padding:14px;margin-bottom:12px}
+.field{margin-bottom:12px}
+.tabs,.loading-switch{margin-bottom:12px}
+.bulk-entry .section-heading[hidden]{display:none}
+.quantity-control>input:not([type=checkbox]):not([type=hidden]){flex:1;min-width:0;width:100%;min-height:56px;padding:12px;border:0;outline:none;background:transparent;font-size:1em;font-variant-numeric:tabular-nums;appearance:textfield}
+.quantity-control>input::-webkit-inner-spin-button,.quantity-control>input::-webkit-outer-spin-button{appearance:none;margin:0}
+.quantity-control:has(.input-unit:empty){padding-right:0}
+.report-date-card>.field{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px}
+.report-date-card>.field>span{margin:0}
+.report-date-card .select-menu summary{min-height:52px;padding:8px 10px;gap:8px}
+.page-home .report-date-nav .select-menu summary{padding:8px;gap:6px;min-height:52px}
+.page-home .report-date-nav .select-title{font-size:max(18px,.85em);white-space:nowrap}
+.page-home .business-tabs{display:flex;flex-wrap:nowrap;gap:2px}
+.page-home .business-tabs>button{min-width:0;padding:8px 2px;font-size:max(18px,.75em);white-space:nowrap}
+.field.report-group-field{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
+.report-group-field>span{margin:0}
+.nav{padding:6px 8px max(8px,env(safe-area-inset-bottom))}
+.nav>button{gap:2px;padding:4px 1px;line-height:1.35}
+.nav .nav-mark{height:28px;width:36px}
+.shell:not(.role-guest){padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+.page-report>.module-picker{margin-bottom:12px}
+.compact-report-meta{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;padding:12px}
+.compact-report-meta>.field{margin:0;min-width:0}
+.compact-report-meta .select-menu summary{padding:8px;min-height:48px;gap:6px}
+.compact-report-meta .select-title{font-size:max(18px,.86em);white-space:nowrap}
+.compact-report-meta .select-meta{font-size:16px}
+.precast-products h2,.precast-people h2{display:flex;align-items:center;gap:8px;font-size:1em;margin:0}
+.form-step{width:28px;height:28px;flex:none;display:inline-flex;align-items:center;justify-content:center;background:var(--soft);color:var(--brand);border-radius:8px;font-size:18px}
+.precast-product-row{padding:14px 0;border-bottom:1px solid var(--line)}
+.precast-product-row .section-heading{margin:0 0 12px;font-size:max(18px,.85em)}
+.precast-product-row .field{margin-bottom:12px}
+.precast-product-row .weight{margin-top:12px}
+.precast-products>[data-action="precast-add"]{margin:18px 0 0}
+.precast-product-row [data-precast-quantity]{border:0;outline:none;font-variant-numeric:tabular-nums;min-width:0}
+.precast-people .section-heading{flex-wrap:wrap}
+.precast-person-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.precast-person{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px 10px;min-height:56px;cursor:pointer;min-width:0}
+.precast-person.selected{background:var(--soft);border-color:var(--brand)}
+.precast-person>span{min-width:0;overflow-wrap:anywhere}
+.precast-person small{display:block;color:var(--sub);font-size:16px;font-weight:400}
+.form-note{margin:16px 0 20px;line-height:1.6}
+.confirmation-meta{margin:0;padding:0 0 12px;border-bottom:1px solid var(--line);display:grid;gap:6px;font-size:max(18px,.85em)}
+.confirmation-meta>div{display:flex;justify-content:space-between;gap:12px}.confirmation-meta dt{color:var(--sub)}.confirmation-meta dd{margin:0;text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.confirmation-section{margin-top:16px}.confirmation-section>h3{font-size:max(18px,.85em);font-weight:600;margin:0 0 10px}
+.confirmation-items{display:grid;gap:10px}.confirmation-item{padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);min-width:0}
+.confirmation-product{display:block;overflow-wrap:anywhere;line-height:1.5;font-size:max(18px,.9em)}.confirmation-person{margin-bottom:6px;font-size:max(18px,.9em)}
+.confirmation-quantity,.confirmation-weight{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:max(18px,.85em)}
+.confirmation-quantity>span,.confirmation-weight{color:var(--sub)}.confirmation-quantity>strong,.confirmation-weight>span:last-child{margin-left:auto;font-variant-numeric:tabular-nums}.confirmation-quantity>strong{color:var(--brand)}
+.confirmation-weight{margin-top:4px;font-size:max(16px,.75em)}
+.confirmation-names{display:flex;flex-wrap:wrap;gap:8px}.confirmation-names>span{padding:4px 10px;border-radius:6px;background:var(--soft);font-size:max(18px,.85em);overflow-wrap:anywhere}
+.confirmation-note{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);line-height:1.6}
+.dialog-body:has(.report-confirmation)+.actions>button{margin:0}
+/* The close button and short title remain available while reading a ledger. */
+html:has(dialog[open]){overflow:hidden}
+dialog{padding:0;max-height:calc(100dvh - 24px);width:min(680px,calc(100% - 24px));max-width:min(680px,calc(100% - 24px));border-radius:16px}
+.dialog-heading{position:sticky;top:0;z-index:25;display:flex;align-items:flex-start;gap:12px;justify-content:space-between;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.dialog-heading h2{font-size:1em;margin:0;align-self:center;overflow-wrap:anywhere}
+.dialog-close{display:flex;align-items:center;justify-content:center;width:44px;min-height:44px;flex:none;padding:8px;background:var(--bg);color:var(--sub);border-radius:50%}
+.dialog-body{padding:20px;min-width:0}
+dialog>.actions{margin:0;padding:0 20px 20px;flex-wrap:wrap}
+dialog>.actions>button{flex:1 1 120px;min-width:0}
+.inventory-product-heading h3,.stock-detail-product h3{margin:0;font-size:1em;line-height:1.5;font-weight:600;overflow-wrap:anywhere}
+.inventory-product-heading>p,.stock-detail-product>p{color:var(--sub);font-size:max(18px,.85em);margin:4px 0 0;overflow-wrap:anywhere}
+.stock-detail-product>.small{font-size:max(16px,.75em);margin-top:12px}
+.inventory-balance{display:grid;gap:4px;margin:16px 0}
+.inventory-balance>span{font-size:max(16px,.75em);color:var(--sub)}
+.inventory-balance>strong{font-size:1.4em;font-variant-numeric:tabular-nums;color:var(--brand);line-height:1.3;overflow-wrap:anywhere}
+.inventory-balance>small{font-size:max(16px,.75em);color:var(--sub)}
+.inventory-period-values{display:grid;gap:8px;margin:0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:max(18px,.85em)}
+.inventory-period-values>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.inventory-period-values dt{color:var(--sub)}
+.inventory-period-values dd{margin:0 0 0 auto;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.inventory-flow-button{display:flex;align-items:center;justify-content:space-between;margin:16px 0 0;padding:12px;gap:8px}
+.inventory-management{margin-top:16px;border-top:1px solid var(--line)}
+.inventory-management>summary{padding:12px 0;min-height:44px;color:var(--sub);font-size:max(18px,.8em);cursor:pointer}
+.inventory-management .stock-edit-actions{margin-top:8px}
+.inventory-date-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;margin-bottom:16px}
+.inventory-date-toolbar #stock-date-form{margin:0}
+.page-inventory .inventory-date-toolbar [data-action="stock-month"]{margin:0;min-height:56px;padding:10px 0}
+.stock-detail-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:16px 0 20px}
+.stock-detail-overview>div{padding:14px 12px;background:var(--panel);min-width:0}
+.stock-detail-overview span{display:block;color:var(--sub);font-size:max(16px,.75em);margin-bottom:6px}
+.stock-detail-overview strong{display:block;font-size:1.05em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stock-detail-overview .stock-detail-final{background:var(--soft)}
+.stock-detail-final strong{color:var(--brand)}
+.stock-ledger>h3{font-size:1em;margin:0 0 12px;font-weight:600}
+.stock-ledger-day{margin:0 0 16px}
+.stock-ledger-day>h4{margin:0 0 8px;font-size:max(18px,.85em);color:var(--sub);font-weight:500;font-variant-numeric:tabular-nums}
+.stock-ledger-entry{margin-top:8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+.stock-ledger-entry>summary{display:grid;gap:6px;padding:12px;cursor:pointer;list-style:none}
+.stock-ledger-entry>summary::-webkit-details-marker{display:none}
+.stock-ledger-topline{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+.stock-ledger-direction{font-size:max(18px,.85em);font-weight:600;flex:none}
+.inbound .stock-ledger-direction,.inbound .stock-ledger-quantity{color:#11766d}
+.outbound .stock-ledger-direction,.outbound .stock-ledger-quantity{color:#a85b1d}
+.stock-ledger-quantity{min-width:0;font-size:1em;line-height:1.4;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stock-ledger-customer{font-size:max(18px,.85em);overflow-wrap:anywhere}
+.stock-ledger-balance{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:max(16px,.78em);color:var(--sub);padding-top:6px;border-top:1px solid var(--line)}
+.stock-ledger-balance>b{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stock-ledger-expand{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--brand);font-size:max(18px,.8em);min-height:32px}
+.stock-ledger-expand .app-icon{width:18px;height:18px;transition:transform .15s}
+.stock-ledger-entry[open] .stock-ledger-expand .app-icon{transform:rotate(90deg)}
+.stock-ledger-people{border-top:1px solid var(--line);padding:0 12px;background:var(--bg)}
+.stock-production-detail{padding:10px 0;border-bottom:1px solid var(--line)}
+.stock-production-detail:last-child{border-bottom:0}
+.stock-participants{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:max(18px,.85em);font-weight:600;line-height:1.5}
+.stock-participants>span{flex:none;max-width:100%;overflow-wrap:anywhere}
+.stock-production-fields{display:grid;gap:4px;margin:6px 0 0;font-size:max(18px,.85em);line-height:1.5}
+.stock-production-fields>div{display:grid;grid-template-columns:4em minmax(0,1fr);align-items:baseline;gap:12px}
+.stock-production-fields dt{color:var(--sub);white-space:nowrap}
+.stock-production-fields dd{margin:0;text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.stock-shipping-detail{margin:0;padding:10px 0;display:grid;gap:8px;font-size:max(18px,.85em)}
+.stock-shipping-detail>div{display:grid;grid-template-columns:4em minmax(0,1fr);gap:8px}
+.stock-shipping-detail dt{color:var(--sub)}
+.stock-shipping-detail dd{margin:0;text-align:right;overflow-wrap:anywhere}
+@media(max-width:380px){.dialog-heading{padding:12px 16px}.dialog-body{padding:16px}dialog>.actions{padding:0 16px 16px}.precast-person{gap:8px}.compact-report-meta{gap:10px}.login-card{padding:16px}.login-code-row>button{padding:8px;font-size:18px}}
+@media(min-width:900px){.shell:not(.role-guest){padding-bottom:12px}.shell:not(.role-guest) .nav{margin:16px 30px}.shell:not(.role-guest) .body{padding-top:0}.role-guest .body{padding-top:24px}}
+
+/* Labels share a column and controls share a column throughout production entry. */
+.page-report .bulk-entry>.field,.page-report .precast-product-row>.field,.page-report .report-date-card>.field{display:grid;grid-template-columns:3.6em minmax(0,1fr);align-items:center;gap:10px}
+.page-report .bulk-entry>.field>span:first-child,.page-report .precast-product-row>.field>span:first-child{margin:0;line-height:1.5}
+.page-report .select-menu summary{min-height:52px;padding:10px;gap:8px}
+.page-report .quantity-control{gap:6px;padding-right:10px}
+.page-report .quantity-control>input:not([type=checkbox]):not([type=hidden]){min-height:52px;padding:10px}
+.page-report .precast-product-row>.field>.quantity-control{margin:0!important}
+.page-report .weight{padding-top:10px;margin-top:12px}
+.bulk-form-actions{gap:16px;margin-top:16px}.precast-products>[data-action="precast-add"]{margin-top:12px}
+.card h2,.precast-people .section-heading{margin-bottom:12px}.precast-product-row{padding:12px 0}
+.worker-range-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:12px}
+.worker-range-form>.field{margin:0;min-width:0}.worker-range-form>.field>span{margin-bottom:6px}
+.worker-range-form input[type=date]{width:100%;min-width:0;max-width:100%;min-height:48px;padding:10px 6px;font-size:max(18px,.72em)}
+.worker-range-form input[type=date]::-webkit-datetime-edit{padding:0}.worker-range-form input[type=date]::-webkit-calendar-picker-indicator{width:14px;margin:0;padding:0}
+.worker-range-form>button{grid-column:1/-1;margin:0;min-height:44px;padding:10px}
+.work-summary{margin-bottom:12px}.work-summary>.card{margin:0}.personal-wages{margin:0 0 12px}
+.work-summary>.work-operations{padding:0 12px}.work-summary .work-operation-row{min-height:0;padding:10px 0;gap:10px;line-height:1.4}.work-operation-row>span{flex:none}.work-operation-row>strong{flex:0 1 auto;min-width:0;text-align:right;overflow-wrap:anywhere}
+.select-date .select-options{left:auto;right:0;min-width:min(260px,calc(100vw - 48px))}.select-date .select-options .select-title{white-space:nowrap;font-size:max(18px,.9em)}
+.compact-report-meta .select-date .select-options{left:0;right:auto}
+/* Search stays in an opaque header; only options scroll beneath it. */
+.select-search-wrap{position:sticky;top:0;z-index:3;padding:8px 0;background:var(--panel)}
+.select-search-wrap>.select-search{position:static;width:100%;margin:0!important;display:block}
+.select-picker[open]{display:flex;flex-direction:column;position:fixed;inset:auto 0 var(--picker-bottom,0);margin:0;width:100%;max-width:100%;height:min(88dvh,var(--picker-max-height,88dvh));max-height:var(--picker-max-height,88dvh);padding:0;border-radius:18px 18px 0 0;background:var(--panel);overflow:hidden}
+.select-picker::backdrop{background:#152c2780}
+.select-picker-header{flex:none;padding:12px 16px 0;border-bottom:1px solid var(--line);background:var(--panel)}
+.select-picker-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.select-picker-heading>h2{margin:0;font-size:1em;line-height:1.5}
+.select-picker-close{flex:none;min-height:44px;padding:8px 0 8px 12px;margin:0;background:transparent;color:var(--brand);font-size:max(18px,.8em)}
+.select-picker .select-search-wrap{position:static;padding:12px 0}
+.select-picker .select-options{position:static;flex:1;min-height:0;max-height:none;width:100%;padding:8px 16px max(16px,env(safe-area-inset-bottom));margin:0;border:0;border-radius:0;box-shadow:none;overflow-y:auto;overscroll-behavior:contain;background:var(--panel)}
+.select-picker .select-options>[role=option]{margin:0;padding:14px 8px;border-radius:8px;border-bottom:1px solid var(--line);min-height:56px;font-size:1em}
+.select-picker .select-options>[role=option]:last-child{border-bottom:0}
+.select-picker .select-options>[role=option]:disabled{display:none}
+.select-picker .select-title{line-height:1.5}.select-picker .select-meta{font-size:max(18px,.8em);line-height:1.5}
+@media(max-width:380px){.page-report .bulk-entry>.field,.page-report .precast-product-row>.field,.page-report .report-date-card>.field{grid-template-columns:3.1em minmax(0,1fr);gap:8px}.page-report .field>span:first-child{font-size:max(18px,.82em)}}
+@media(max-width:380px){.worker-range-form{gap:8px}.worker-range-form input[type=date]{padding:10px 3px;font-size:18px}}
+
+/* Compact date rows, persistent navigation, and aligned shipping fields. */
+.page-report .report-date-card{padding:10px 12px}.page-report .report-date-card>.field{margin:0}.page-report .report-date-card .select-title{font-size:max(18px,.85em);white-space:nowrap}
+/* Only the content pane scrolls; the navigation has its own viewport row. */
+html.app-logged-in,html.app-logged-in body,html.app-logged-in #app{height:100%;overflow:hidden;overscroll-behavior-y:none}
+.shell:not(.role-guest){display:grid;grid-template-rows:minmax(0,1fr) auto;height:100vh;height:var(--app-viewport-height,100dvh);min-height:0;margin:0 auto;padding-bottom:0;overflow:hidden;border-top:0;border-bottom:0;border-radius:0}
+.shell:not(.role-guest)>.body{grid-row:1;min-height:0;width:100%;height:100%;margin:0 auto;overflow-y:auto;overscroll-behavior-y:none;-webkit-overflow-scrolling:touch}
+.shell:not(.role-guest) .nav{grid-row:2;position:relative;inset:auto;transform:none;justify-self:center;align-self:end;width:min(520px,100%);margin:0;border-radius:0;z-index:40;touch-action:pinch-zoom;user-select:none;-webkit-user-select:none}
+html:has(dialog[open]) .shell:not(.role-guest)>.body{overflow:hidden}
+.shell:not(.role-guest) .nav>button{flex-direction:column;gap:2px;padding:4px 1px;font-size:max(16px,.73em)}
+.precast-person[hidden]{display:none!important}.precast-people-toggle{display:block;width:100%;margin:12px 0 0;padding:8px;min-height:44px;text-align:center}
+.select-picker-heading{align-items:center}.select-picker-close{min-height:44px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--soft);line-height:1.5}
+.inventory-date-toolbar{display:block;margin-bottom:12px}.inventory-date-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;font-size:max(18px,.85em)}
+.page-inventory .inventory-date-heading [data-action="stock-month"]{min-height:44px;padding:6px 0;margin:0;font-size:inherit;white-space:nowrap}
+.inventory-product-model{font-size:max(18px,.85em);color:var(--sub);font-weight:400}
+#shipment-form>.field,#shipment-form .shipment-entry>.field{display:grid;grid-template-columns:3.4em minmax(0,1fr);gap:8px;align-items:center;margin:0 0 12px}
+#shipment-form .field>span:first-child{margin:0;font-size:max(18px,.78em);line-height:1.5}
+#shipment-form .field>.quantity-control{margin:0;font-size:1em;font-weight:400}
+#shipment-form .select-menu summary{min-height:52px;padding:10px;gap:8px}#shipment-form .select-date .select-title{font-size:max(18px,.85em);white-space:nowrap}
+#shipment-form .pump-upload{padding:12px;margin:0 0 12px}#shipment-form .shipment-entry{padding:12px 0;margin:0;border-top:1px solid var(--line)}
+#shipment-form .shipment-entry>.field:last-of-type{margin-bottom:0}#shipment-form .shipment-remove{display:block;width:auto;margin:8px 0 0 auto;min-height:44px;padding:6px 0}
+#shipment-form>[data-action="shipment-add"]{margin:0 0 12px}#shipment-form>.primary{margin:0}#shipment-form>.disclosure{margin:0 0 12px}
+#shipment-form>.field:last-of-type{margin-bottom:12px}
+
+/* Clear steps and destructive actions without adding another page heading. */
+.remove-action,.text-action.remove-action,#shipment-form .shipment-remove{color:#b42318;background:#fff0ef;border:1px solid #efb7b1;border-radius:9px;min-height:44px;padding:7px 12px;line-height:1.4;font-weight:600}
+.remove-action:hover{background:#ffe1de}.remove-action:focus-visible{outline-color:#b42318}
+.page-report .precast-step-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 8px;margin:0 0 12px;background:var(--soft);color:var(--brand);border-left:4px solid var(--brand);border-radius:10px}
+.precast-step-heading h2{display:flex;align-items:center;gap:8px;margin:0;font-size:max(18px,.82em);font-weight:700;line-height:1.4}
+.precast-step-heading .form-step{width:32px;height:32px;flex:none;border-radius:8px;background:var(--brand);color:#fff;font-size:20px;font-weight:700}
+.precast-step-heading>[data-precast-headcount]{margin-left:auto;color:var(--brand);font-size:16px;white-space:nowrap}
+.record-detail-toolbar{position:sticky;top:0;z-index:4;display:flex;justify-content:flex-end;padding:0 0 8px;margin:0 0 4px;background:var(--bg)}
+.record-detail-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.record-detail-heading>b{flex:1;min-width:0;overflow-wrap:anywhere;font-size:.94em;line-height:1.5}.record-detail-heading>.detail-close{margin:0}.record-detail-status{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.record-detail-status+.record-amount{margin-top:10px}
+.detail-close,.dialog-close{display:flex;align-items:center;justify-content:center;gap:6px;flex:none;width:auto;min-height:44px;padding:8px 12px;border:1px solid var(--brand);border-radius:10px;background:var(--brand);color:#fff;font-size:max(18px,.8em);font-weight:600;line-height:1.4;white-space:nowrap}
+.detail-close .app-icon,.dialog-close .app-icon{width:20px;height:20px}
+html.keyboard-open .shell:not(.role-guest) .nav{display:none}
+
+/* Shipping keeps required fields visible; optional information expands on demand. */
+dialog:has(#shipment-form) .dialog-heading{padding:10px 16px}
+dialog:has(#shipment-form) .dialog-body{padding:12px 16px 16px}
+#shipment-form>.field,#shipment-form .shipment-entry>.field{margin-bottom:10px}
+#shipment-form .shipment-entry{padding:10px 0}
+#shipment-form>[data-action="shipment-add"]{min-height:44px;padding:8px;margin:0 0 10px;font-size:max(18px,.8em)}
+#shipment-form .shipment-extra{margin:0 0 12px;box-shadow:none;border:1px solid var(--line);border-radius:10px}
+#shipment-form .shipment-extra>summary{display:flex;align-items:center;gap:8px;min-height:46px;padding:10px 12px;font-size:max(18px,.8em)}
+#shipment-form .shipment-extra>summary>.small{min-width:0;flex:1;font-size:16px;font-weight:400;line-height:1.4}
+#shipment-form .shipment-extra>.disclosure-body{padding:12px;border-top:1px solid var(--line)}
+#shipment-form .shipment-extra .field{display:grid;grid-template-columns:3.4em minmax(0,1fr);align-items:center;gap:8px;margin-bottom:10px}
+#shipment-form .shipment-extra .field:last-child{margin-bottom:0}
+#shipment-form .pump-upload{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;border:0;border-radius:0;padding:0;margin:0 0 10px;font-size:max(18px,.8em)}
+#shipment-form #pump-file-info{min-width:0;text-align:right;font-size:16px;overflow-wrap:anywhere}
+#shipment-form .pump-upload>.row{grid-column:1/-1;flex-wrap:nowrap;gap:8px}
+#shipment-form .pump-upload .soft{flex-basis:0;min-height:44px;padding:8px;margin:0;font-size:18px}
+#shipment-form [data-action="pump-remove"]{grid-column:1/-1;justify-self:end;width:auto}
+#shipment-form>.primary{min-height:52px}
+.shipment-meta{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:8px 0;font-size:max(16px,.7em);color:var(--sub);line-height:1.5}
+.shipment-meta>span{white-space:nowrap}
+.inventory-date-heading [data-action="stock-month"].active{color:var(--brand);font-weight:600}
+.page-inventory #stock-date-form .select-title{font-size:max(18px,.85em);white-space:nowrap}
+.inventory-product-card{padding:12px 14px;margin-bottom:10px}
+.inventory-product-card .inventory-product-heading h3{font-size:max(18px,.85em);line-height:1.4}
+.inventory-product-card .inventory-product-model{font-size:inherit}
+.inventory-product-card .inventory-balance{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;gap:2px 10px;margin:8px 0}
+.inventory-product-card .inventory-balance>strong{font-size:1.1em;text-align:right;line-height:1.3}
+.inventory-product-card .inventory-balance>small{grid-column:2;text-align:right;font-size:16px}
+.inventory-product-card .inventory-period-values{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:8px 0;border-bottom:0;font-size:max(18px,.75em)}
+.inventory-product-card .inventory-period-values>div{display:block;min-width:0}
+.inventory-product-card .inventory-period-values dt{font-size:16px;line-height:1.5}
+.inventory-product-card .inventory-period-values dd{margin:3px 0 0;line-height:1.4}
+.inventory-card-actions{position:relative;min-height:44px;padding-top:44px;margin-top:6px;border-top:1px solid var(--line)}
+.inventory-card-actions>.inventory-flow-button{position:absolute;top:0;left:0;display:inline-flex;width:auto;min-height:44px;margin:0;padding:6px 0;background:transparent;font-size:max(18px,.75em)}
+.inventory-card-actions .inventory-management{margin:0;border:0}
+.inventory-card-actions .inventory-management>summary{position:absolute;top:0;right:0;min-height:44px;padding:6px 0;font-size:max(18px,.75em)}
+.inventory-management-content{padding:8px 0 0}
+.inventory-management-content .stock-edit-actions{margin:8px 0 0;padding:8px 0 0}
+
+/* Record quantities stay together; management fields use the same label column. */
+.record-list-amount{align-items:baseline;gap:8px;flex-wrap:wrap}
+.record-values{display:flex;align-items:baseline;gap:8px 16px;flex-wrap:wrap;min-width:0}
+.record-values>b{white-space:nowrap}.record-values>b>small{margin-left:4px}
+.record-values>.record-weight{font-size:max(18px,.8em);color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+.record-list-amount.has-weight{display:block}.record-list-amount.has-weight>.record-date{display:block;margin-top:6px}
+.role-admin #search-form.manage-search{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;margin-bottom:12px}
+.manage-search>input{min-width:0;width:100%}.manage-search>button{width:auto;margin:0;padding:10px;min-height:52px}
+.manage-count{font-size:max(16px,.75em);color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+#manage-form[data-kind="products"]>.field{display:grid;grid-template-columns:3em minmax(0,1fr);align-items:center;gap:10px;margin:0 0 12px}
+#manage-form[data-kind="products"]>.field>span:first-child{margin:0;font-size:max(18px,.85em);line-height:1.5}
+#manage-form[data-kind="products"] .field input,#manage-form[data-kind="products"] .select-menu summary{min-height:52px;padding:10px;min-width:0;width:100%}
+#manage-form[data-kind="products"] .quantity-control{margin:0;min-width:0;padding-right:10px;gap:6px}
+#manage-form[data-kind="products"] .quantity-control>input{border:0;width:100%}
+#manage-form[data-kind="products"] .check-line{margin:4px 0 16px}
+#manage-form[data-kind="products"]>.primary{margin:0}
+.page-home .summary-date-field{display:grid;grid-template-columns:3em minmax(0,1fr);gap:10px;align-items:center;margin-bottom:12px}
+.page-home .summary-date-field>span{margin:0}
+.page-home .summary-date-field.date-only{grid-template-columns:minmax(0,1fr)}
+@media(max-width:380px){.role-admin #search-form.manage-search{gap:6px}.manage-search>button{font-size:18px;padding:8px}#manage-form[data-kind="products"]>.field{gap:8px}}

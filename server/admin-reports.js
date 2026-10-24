@@ -4,6 +4,13 @@ import {hasPermission,assertPermission} from './permissions.js';
 
 const iso=d=>d.toISOString().slice(0,10),dayDate=s=>new Date(s+'T00:00:00Z');
 export function reportRange(q={},current=today()){
+ if(q.period==='custom'){
+  const from=date(q.from||current.slice(0,7)+'-01'),to=date(q.to||current);
+  if(from>to)fail(400,'开始日期不能晚于结束日期');
+  if(to>current)fail(400,'结束日期不能晚于今天');
+  if(Date.parse(to)-Date.parse(from)>366*864e5)fail(400,'查询时间范围最多一年');
+  return {period:'custom',date:to,from,to,previousDate:null,nextDate:null,nextDisabled:true};
+ }
  const period=q.period||'day',anchor=date(q.date||current);if(!['day','week','month'].includes(period)||anchor>current)fail(400,'请选择日、周、月及不晚于今天的日期');
  const start=dayDate(anchor),end=dayDate(anchor);
  if(period==='week'){start.setUTCDate(start.getUTCDate()-(start.getUTCDay()+6)%7);end.setTime(start.getTime());end.setUTCDate(end.getUTCDate()+6);}

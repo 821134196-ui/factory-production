@@ -6,6 +6,14 @@ private-data/ 保存真实人员、客户、产品、工资和补助规则、期
 
 ## 日常备份和恢复
 
+只想在另一台电脑初始化业务数据，可执行 npm run privacy:init-script，生成 private-data/恢复初始化数据.cjs。它是一个可独立执行的压缩脚本，包含当前人员、客户、产品、生产、发货、库存、工资、泵单附件、必要的 Excel 模板，以及本地 .env 中的腾讯云短信密钥、签名、模板和管理员登录配置；不收集旧发布包、备份、说明文档及旧登录状态。
+
+将这一个文件单独复制到新电脑拉取后的项目根目录，安装 Node.js 22.13 以上，执行 node 恢复初始化数据.cjs 即可，无需先安装 npm 依赖或携带 ZIP。请在首次启动前执行；若 data/、private-data/ 已有资料或 .env 已存在，脚本会拒绝覆盖。恢复会自动生成本地 .env，将数据库和私有资料目录改成相对路径，并生成新的 APP_SECRET；腾讯云短信密钥保持原配置。若源项目没有 .env，则只生成业务数据脚本。若旧脚本存在，生成器会拒绝覆盖；可以用 node --env-file-if-exists=.env scripts/create-initial-data-script.js --output private-data/恢复初始化数据-新版本.cjs 生成新快照。
+
+Linux Docker 部署时以 root 执行 node 恢复初始化数据.cjs --docker。脚本额外生成 .env.docker 和 compose.override.yaml，设置容器用户 UID 1000 的文件读写权限，并让 Compose 直接挂载恢复后的 ./data。然后执行 docker compose up -d --build --wait 即可。没有宿主机 Node.js 时可借助 node:22-alpine 容器恢复，详见 DOCKER.md。直接使用 Node.js 在 Linux 恢复时，监听地址自动设为 0.0.0.0。
+
+初始化脚本内含真实数据和短信密钥，压缩不等于脱敏，不能上传 GitHub。默认保存在被忽略的 private-data/；复制到项目根目录时，默认文件名也会被 Git 和 Docker 忽略，发布检查会拒绝该文件。
+
 备份：npm run privacy:backup
 
 恢复：node scripts/privacy.js restore --from 备份包路径 --target 新项目目录
@@ -27,3 +35,5 @@ private-data/ 保存真实人员、客户、产品、工资和补助规则、期
 提交检查读取 Git 暂存区，避免“工作目录已清除，暂存版本仍含敏感内容”的情况。推送检查扫描本地全部分支和标签可达的历史文件，防止重新带入旧私有提交。发布脚本扫描本地已知姓名、手机号、客户、产品与凭证的匹配，并检查私有目录、数据库、密钥文件与 Excel 包内文本。公开仓库脱离原私有资料后仍检查路径、完整手机号及常见密钥格式；新增业务配置继续放在 private-data 中。
 
 检查工具属于发布辅助，不能自动理解所有商业信息。新增资料不要存入代码、测试或公开文档。代码和私有资料分开维护、分开迁移。
+
+历史扫描仅对旧登录测试中“未知账号应被拒绝”的那条固定占位断言豁免手机号格式误报；新文件、暂存内容、其他位置及本地已知敏感值仍严格检查。

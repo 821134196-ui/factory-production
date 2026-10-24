@@ -15,12 +15,12 @@ function metrics(service,records){
  for(const r of latest.filter(r=>r.counted)){
   const name=r.product.loadingOperation||r.product.category,m=result.find(m=>m.name===name);if(!m)continue;
   const quantity=m.unit==='吨'&&r.product.unit==='公斤'?r.quantity/1000:r.quantity;
-  const isGroupTotal=['shared','historical-group'].includes(r.mode),key=r.product.loadingOperation?name:`${r.product.id}|${r.product.unit}${isGroupTotal?'|group':''}`;
+  const isGroupTotal=['shared','historical-group','crew'].includes(r.mode),key=r.product.loadingOperation?name:`${r.product.id}|${r.product.unit}${isGroupTotal?'|group':''}`;
   if(isGroupTotal){m.referenceQuantity=round(m.referenceQuantity+quantity);m.referenceWeightKg=round(m.referenceWeightKg+(r.weightKg||0));}else{m.quantity=round(m.quantity+quantity);m.weightKg=round(m.weightKg+(r.weightKg||0));}
   const items=itemMaps.get(name),item=items.get(key)||{id:key,name:r.product.loadingOperation||r.product.fullName||r.product.name||r.product.spec,productTitle:r.product.productTitle||r.product.name,productDetail:r.product.productDetail??r.product.spec??'',isGroupTotal,unit:m.unit,quantity:0,count:0,weightKg:0};
   item.quantity=round(item.quantity+quantity);item.count+=1;item.weightKg=round(item.weightKg+(r.weightKg||0));items.set(key,item);
  }
- for(const r of records){const name=r.product.loadingOperation||r.product.category,m=result.find(m=>m.name===name);if(!m)continue;if(r.counted&&r.status==='approved'&&!['shared','historical-group'].includes(r.mode)){m.confirmed=round(m.confirmed+(m.unit==='吨'&&r.product.unit==='公斤'?r.quantity/1000:r.quantity));}if(r.status==='pending')pending.set(name,(pending.get(name)||0)+1);}
+ for(const r of records){const name=r.product.loadingOperation||r.product.category,m=result.find(m=>m.name===name);if(!m)continue;if(r.counted&&r.status==='approved'&&!['shared','historical-group','crew'].includes(r.mode)){m.confirmed=round(m.confirmed+(m.unit==='吨'&&r.product.unit==='公斤'?r.quantity/1000:r.quantity));}if(r.status==='pending')pending.set(name,(pending.get(name)||0)+1);}
  for(const m of result){m.pendingCount=pending.get(m.name)||0;m.items=[...itemMaps.get(m.name).values()];m.isGroupTotal=!!m.items.length&&m.items.every(item=>item.isGroupTotal);}
  return result;
 }
@@ -29,7 +29,7 @@ export function productionOverview(db,service,user,q={}){
  const {from,to}=service.range(q),all=service.annotate(service.rawList({from,to})),own=all.filter(r=>r.members.some(m=>m.id===user.id));
  const result={from,to,metrics:metrics(service,own),records:own.slice(0,30),people:[]};
  if(!user.is_leader){if(q.workerId&&q.workerId!==user.id)fail(403,'只能查看自己的生产');return result;}
- const ids=new Set([user.id,...db.prepare("SELECT id FROM users WHERE role='worker' AND active=1 AND group_id=?").all(user.group_id).map(u=>u.id),...db.prepare('SELECT DISTINCT m.user_id FROM members m JOIN records r ON r.id=m.record_id WHERE r.submitted_by=? AND r.mode=\'leader\'').all(user.id).map(m=>m.user_id)]);
+ const ids=new Set([user.id,...db.prepare("SELECT id FROM users WHERE role='worker' AND active=1 AND group_id=?").all(user.group_id).map(u=>u.id),...db.prepare("SELECT DISTINCT m.user_id FROM members m JOIN records r ON r.id=m.record_id WHERE r.submitted_by=? AND r.mode IN ('leader','crew') AND r.deleted_at=''").all(user.id).map(m=>m.user_id)]);
  const workers=sortedWorkers(db,user).filter(w=>ids.has(w.id));
  if(q.workerId&&!ids.has(q.workerId))fail(403,'不能查看其他班组工人的生产');
  result.people=workers.map(w=>{const records=all.filter(r=>r.members.some(m=>m.id===w.id));return {...w,metrics:metrics(service,records),pendingCount:records.filter(r=>r.status==='pending').length};});

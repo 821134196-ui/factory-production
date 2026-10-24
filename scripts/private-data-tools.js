@@ -71,9 +71,9 @@ export function publicFiles(root=process.cwd()){
  const files=execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);
  return [...new Set(files)].filter(file=>fs.existsSync(path.join(root,file)));
 }
-export async function scanPublic({root=process.cwd(),files=publicFiles(root),sensitiveValues=[],readFile}={}){
+export async function scanPublic({root=process.cwd(),files=publicFiles(root),sensitiveValues=[],readFile,historical=false}={}){
  const problems=[];
- const forbidden=/(^|\/)(?:private-data|data|backups|qa|reports|release|public-release|node_modules|\.git)(\/|$)|(?:^|\/)\.env(?!.*\.example$)|\.(?:sqlite(?:-\w+)?|db|pem|key|zip|bundle|log)$/i;
+ const forbidden=/(^|\/)(?:private-data|data|backups|qa|reports|release|public-release|node_modules|\.git)(\/|$)|(?:^|\/)(?:\.initial-data-restore-[^/]*|恢复初始化数据[^/]*\.cjs|compose\.override\.yaml)(?:\/|$)|(?:^|\/)\.env(?!.*\.example$)|\.(?:sqlite(?:-\w+)?|db|pem|key|zip|bundle|log)$/i;
  const privateSource=/^server\/(?:source-data\/|templates\/|accounts\.json$|staff-roster\.json$|catalog\.json$|shipping-customers\.json$|opening-stock-.*\.json$|wage-source\.json$)/;
  for(const file of files){
   if(forbidden.test(file)||privateSource.test(file)){problems.push({file,reason:'私有文件不得发布'});continue;}
@@ -85,7 +85,11 @@ export async function scanPublic({root=process.cwd(),files=publicFiles(root),sen
    if(file.endsWith('.example')&&/^(?:APP_SECRET|ADMIN_PHONE|TENCENT_SECRET_ID|TENCENT_SECRET_KEY|TENCENT_SMS_SDK_APP_ID|TENCENT_SMS_SIGN_NAME|TENCENT_SMS_TEMPLATE_ID|SMS_WEBHOOK_TOKEN)=[ \t]*[^ \t\r\n].*$/m.test(text)){problems.push({file,reason:'公开配置示例必须留空身份与凭证字段'});break;}
    if(/\bAKID[A-Za-z0-9]{25,}\b|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(text)){problems.push({file,reason:'疑似真实密钥'});break;}
    if(sensitiveValues.some(value=>value.length>=2&&text.includes(value))){problems.push({file,reason:'包含本地真实身份、客户或凭证'});break;}
-   if(/(?<![\dA-Za-z])1[3-9]\d{9}(?!\d)/.test(text)){problems.push({file,reason:'包含完整手机号；示例与测试应使用合成号码'});break;}
+   // One old unknown-account test used an all-nines sentinel. Only its exact
+   // assertion is exempt in history; new files and known private values remain strict.
+   const legacyAssertion=`assert.equal((await f.req('/api/auth/login',null,'POST',{phone:'${'1'+'9'.repeat(10)}',code:'666888'})).status,403);`;
+   const phoneText=historical&&file==='tests/public-system.test.js'?text.split(/\r?\n/).filter(line=>line.trim()!==legacyAssertion).join('\n'):text;
+   if(/(?<![\dA-Za-z])1[3-9]\d{9}(?!\d)/.test(phoneText)){problems.push({file,reason:'包含完整手机号；示例与测试应使用合成号码'});break;}
   }
  }
  return {files:files.length,problems};
@@ -96,7 +100,7 @@ export async function scanHistory({root=process.cwd(),sensitiveValues=[]}={}){
  const problems=[];let checked=0;
  for(const [,id,file]of objects){
   const type=execFileSync('git',['cat-file','-t',id],{cwd:root,encoding:'utf8'}).trim();if(type!=='blob')continue;
-  const report=await scanPublic({root,files:[file],sensitiveValues,readFile:()=>execFileSync('git',['cat-file','blob',id],{cwd:root,maxBuffer:64*1024*1024})});
+  const report=await scanPublic({root,files:[file],sensitiveValues,historical:true,readFile:()=>execFileSync('git',['cat-file','blob',id],{cwd:root,maxBuffer:64*1024*1024})});
   checked++;problems.push(...report.problems);
  }
  return {objects:checked,problems};

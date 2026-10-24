@@ -1,25 +1,23 @@
 <view class="page-shell" style="font-size:{{fontSize}}px">
-  <page-head title="我的" subtitle="{{subtitle}}" demo="{{demoMode}}"/>
   <block wx:if="{{user.role==='worker'&&overview}}">
-    <view class="tabs">
-      <button class="{{workerPeriod==='day'?'active':''}}" data-value="day" bindtap="workerPeriod">今天</button>
+    <view class="home-toolbar"><view class="tabs">
+      <button class="{{workerPeriod==='day'?'active':''}}" data-value="day" bindtap="workerPeriod">按日</button>
       <button class="{{workerPeriod==='month'?'active':''}}" data-value="month" bindtap="workerPeriod">本月</button>
       <button class="{{workerPeriod==='custom'?'active':''}}" data-value="custom" bindtap="workerPeriod">自定义</button>
-    </view>
-    <view wx:if="{{workerPeriod==='day'}}" class="field">
-      <view class="field-label">生产日期</view>
+    </view><button class="my-settings" bindtap="openSettings"><image src="/assets/icons/settings.svg"/><text>设置</text></button></view>
+    <view wx:if="{{workerPeriod==='day'}}" class="field summary-date-field date-only">
       <nice-select options="{{dates}}" value="{{summaryDate}}" font-size="{{fontSize}}" bindchange="summaryDate"/>
     </view>
-    <view wx:if="{{workerPeriod==='custom'}}" class="card">
+    <view wx:if="{{workerPeriod==='custom'}}" class="card worker-range-form"><view class="range-date-fields">
       <view class="field">
-        <view class="field-label">开始日期</view>
+        <view class="field-label">开始</view>
         <picker mode="date" value="{{customFrom}}" end="{{today}}" data-key="customFrom" bindchange="customDate"><view class="date-choice">{{customFrom}}</view></picker>
       </view>
       <view class="field">
-        <view class="field-label">结束日期</view>
+        <view class="field-label">结束</view>
         <picker mode="date" value="{{customTo}}" end="{{today}}" data-key="customTo" bindchange="customDate"><view class="date-choice">{{customTo}}</view></picker>
       </view>
-      <button class="soft" bindtap="customRange">查看</button>
+      </view>
     </view>
     <view class="work-summary">
       <block wx:for="{{overview.detailMetrics}}" wx:key="name" wx:for-item="metric">

@@ -23,6 +23,12 @@ export class BatchProductionService extends ProductionService{
   return {...super.view(r),revisionAt:r.revision_at||r.submitted_at,sequence:r.sequence||this.db.prepare('SELECT rowid n FROM records WHERE id=?').get(r.id)?.n||0,originalUnit:original?.unit||(firstCorrection?JSON.parse(firstCorrection.before_json).product?.unit:null)||JSON.parse(r.product_json).unit,shift:r.shift||'',batchCode:r.batch_code||'',sourceRef:r.source_ref||''};
  }
  annotate(rows){
+  // A crew entry is a single daily product total, regardless of its headcount.
+  // It replaces earlier online entries for that product/group/day; imported
+  // historical cells remain protected by assertNoHistoricalOverlap.
+  const crews=new Map();
+  const crewKey=r=>JSON.stringify([r.date,r.product.id,r.groupId]);
+  for(const r of rows.filter(r=>r.mode==='crew'&&r.status!=='rejected'&&!r.sourceRef).sort(latestFirst))if(!crews.has(crewKey(r)))crews.set(crewKey(r),r);
   const approved=new Map();
   const days=new Map();
   // Historical source cells are independent audited work. In particular,
@@ -42,6 +48,7 @@ export class BatchProductionService extends ProductionService{
    list.sort(latestFirst);
    const winner=list[0];for(const r of list.slice(1)){r.counted=false;r.effectiveRecordId=winner.id;r.excludedReason='已采用最新填写的数量，原记录保留';}
   }
+  for(const r of rows){const winner=crews.get(crewKey(r));if(winner&&!r.sourceRef&&r.status!=='rejected'&&r.id!==winner.id){r.counted=false;r.effectiveRecordId=winner.id;r.excludedReason='已采用最新班组填写的总量与生产人员，原记录保留';}}
   const batches=new Map();for(const r of rows){if(!r.batchCode)continue;const key=batchKey(r),b=batches.get(key)||{quantity:0,names:new Set()};if(r.counted){b.quantity=round(b.quantity+r.quantity);for(const m of r.members)b.names.add(m.name);}batches.set(key,b);}
   const dailyTotals=new Map();for(const r of rows)if(r.counted){const key=dayKey(r);dailyTotals.set(key,round((dailyTotals.get(key)||0)+r.quantity));}
   for(const r of rows){r.dailyQuantity=dailyTotals.get(dayKey(r))||0;if(r.batchCode){const b=batches.get(batchKey(r));r.batchQuantity=b.quantity;r.batchMemberNames=[...b.names].join('、');}}
@@ -50,14 +57,14 @@ export class BatchProductionService extends ProductionService{
  list(user,q={}){
   if(q.loadingOperation&&!['装车','卸车'].includes(q.loadingOperation))fail(400,'装卸作业类型不正确');
   assertProductionRead(user);const range=this.range(q),rows=this.annotate(this.rawList(range));
-  return rows.filter(r=>(user.role==='admin'||r.submittedBy===user.id||r.members.some(m=>m.id===user.id))&&(!q.groupId||r.groupId===q.groupId)&&(!q.workerId||r.members.some(m=>m.id===q.workerId))&&(!q.productId||r.product.id===q.productId)&&(!q.category||r.product.category===q.category)&&(!q.loadingOperation||r.product.loadingOperation===q.loadingOperation)&&(!q.status||r.status===q.status)).map(r=>({...r,canDelete:r.status!=='approved'&&(user.role==='admin'?hasPermission(user,'edit'):r.submittedBy===user.id||r.members.some(m=>m.id===user.id))}));
+  return rows.filter(r=>(user.role==='admin'||r.submittedBy===user.id||r.members.some(m=>m.id===user.id))&&(!q.groupId||r.groupId===q.groupId)&&(!q.workerId||r.members.some(m=>m.id===q.workerId))&&(!q.productId||r.product.id===q.productId)&&(!q.category||r.product.category===q.category)&&(!q.loadingOperation||r.product.loadingOperation===q.loadingOperation)&&(!q.status||r.status===q.status)).map(r=>({...r,canDelete:r.status!=='approved'&&(user.role==='admin'?hasPermission(user,'edit'):r.mode==='crew'?!!user.is_leader&&r.submittedBy===user.id:r.submittedBy===user.id||r.members.some(m=>m.id===user.id))}));
  }
  approveMany(user,entries){
   assertPermission(user,'review');
   if(!Array.isArray(entries)||!entries.length||entries.length>200||entries.some(e=>!e||typeof e.id!=='string'||!e.id||!Number.isInteger(e.version)||e.version<1)||new Set(entries.map(e=>e.id)).size!==entries.length)fail(400,'请选择1至200条不同的待确认记录');
   return transaction(this.db,()=>entries.map(e=>this.update(user,e.id,{action:'approve',version:e.version})));
  }
- remove(user,id,input){return transaction(this.db,()=>{const r=this.get(user,id);if(user.role==='admin')assertPermission(user,'edit');if(r.status==='approved')fail(403,'已确认记录不能删除');if(!Number.isInteger(input.version)||input.version!==r.version)fail(409,'记录已被更新，请刷新后再删除');const before=this.snapshot(r),stamp=now();this.db.prepare('UPDATE records SET deleted_at=?,updated_at=?,version=version+1 WHERE id=?').run(stamp,stamp,id);this.audit(r,user,'delete',before,{...before,deletedAt:stamp},'删除未确认记录');this.db.prepare("UPDATE change_requests SET status='resolved',resolved_at=? WHERE record_id=? AND status='open'").run(stamp,id);this.announce(r,user,'未确认生产记录已删除');this.db.prepare('UPDATE notices SET record_id=NULL WHERE record_id=?').run(id);return {ok:true};});}
+ remove(user,id,input){return transaction(this.db,()=>{const r=this.get(user,id);if(user.role==='admin')assertPermission(user,'edit');else if(r.mode==='crew'&&(!user.is_leader||r.submitted_by!==user.id))fail(403,'班组生产记录只能由填写组长或管理员删除');if(r.status==='approved')fail(403,'已确认记录不能删除');if(!Number.isInteger(input.version)||input.version!==r.version)fail(409,'记录已被更新，请刷新后再删除');const before=this.snapshot(r),stamp=now();this.db.prepare('UPDATE records SET deleted_at=?,updated_at=?,version=version+1 WHERE id=?').run(stamp,stamp,id);this.audit(r,user,'delete',before,{...before,deletedAt:stamp},'删除未确认记录');this.db.prepare("UPDATE change_requests SET status='resolved',resolved_at=? WHERE record_id=? AND status='open'").run(stamp,id);this.announce(r,user,'未确认生产记录已删除');this.db.prepare('UPDATE notices SET record_id=NULL WHERE record_id=?').run(id);return {ok:true};});}
  detail(user,id){const r=this.get(user,id);return this.list(user,{from:r.production_date,to:r.production_date}).find(row=>row.id===id);}
  create(user,input){
   return transaction(this.db,()=>this.insertBatchRecord(user,input));
@@ -77,6 +84,37 @@ export class BatchProductionService extends ProductionService{
    const rows=input.entries.map(e=>this.insertBatchRecord(user,{...input,productId:e.productId||input.productId,mode:'leader',workerId:e.workerId,quantity:e.quantity,requestId:old&&this.db.prepare('SELECT 1 FROM records WHERE submitted_by=? AND request_id=?').get(user.id,createHash('sha256').update(requestId+'|'+e.workerId).digest('hex'))?createHash('sha256').update(requestId+'|'+e.workerId).digest('hex'):createHash('sha256').update(requestId+'|'+e.workerId+'|'+(e.productId||input.productId)).digest('hex')}));this.db.prepare('INSERT OR IGNORE INTO leader_requests VALUES (?,?,?)').run(user.id,requestId,requestHash);if(!old)rememberWorkers(this.db,user,input.entries.map(e=>e.workerId));return rows;
   });
  }
+ createCrew(user,input){
+  if(user.role!=='admin'&&!user.is_leader)fail(403,'需要组长权限');
+  const productionDate=date(input.date);if(productionDate>today()||productionDate<earliestFillDate())fail(400,'只能填写最近7天（含今天）的生产数量');
+  const groupId=text(input.groupId,'生产班组',40);
+  if(['g4','g5'].includes(groupId)||!this.db.prepare('SELECT 1 FROM groups WHERE id=?').get(groupId))fail(400,'请选择预制块生产班组');
+  if(!Array.isArray(input.memberIds)||!input.memberIds.length||input.memberIds.length>100||input.memberIds.some(id=>typeof id!=='string'||!id)||new Set(input.memberIds).size!==input.memberIds.length)fail(400,'请选择不同的实际生产人员');
+  if(!Array.isArray(input.products)||!input.products.length||input.products.length>100||input.products.some(p=>!p||typeof p.productId!=='string')||new Set(input.products.map(p=>p.productId)).size!==input.products.length)fail(400,'请选择1至100个不同的预制块产品');
+  const memberIds=input.memberIds.slice().sort(),requestId=text(input.requestId,'提交标识',100);
+  const requestHash=createHash('sha256').update(JSON.stringify(['crew',productionDate,groupId,memberIds,input.products.slice().sort((a,b)=>a.productId.localeCompare(b.productId))])).digest('hex');
+  return transaction(this.db,()=>{
+   const old=this.db.prepare('SELECT payload_hash FROM leader_requests WHERE user_id=? AND request_id=?').get(user.id,requestId);
+   if(old&&old.payload_hash!==requestHash)fail(409,'重复提交内容不一致，请重新填写');
+   for(const id of memberIds){
+    if(!this.db.prepare("SELECT 1 FROM users WHERE id=? AND role='worker' AND active=1").get(id))fail(400,'请选择在岗工人');
+    if(this.db.prepare('SELECT 1 FROM attendance WHERE user_id=? AND production_date=?').get(id,productionDate))fail(400,'参与工人当天已标记休息或停产，请先取消标记');
+   }
+   const rows=input.products.map(e=>{
+    const raw=this.db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(e.productId);if(!raw||raw.category!=='预制块'||!raw.unit)fail(400,'请选择已启用的预制块产品');
+    const p=productView(raw);if(p.groupId&&p.groupId!==groupId)fail(400,'产品和生产班组不匹配');
+    const qty=quantity(e.quantity,p),recordRequest=createHash('sha256').update('crew|'+requestId+'|'+p.id).digest('hex');
+    const existing=this.db.prepare('SELECT * FROM records WHERE submitted_by=? AND request_id=?').get(user.id,recordRequest);if(existing)return this.view(existing);
+    this.assertNoHistoricalOverlap({date:productionDate,productId:p.id,groupId,memberIds,quantity:qty});
+    const id=randomUUID(),stamp=now();
+    this.db.prepare('INSERT INTO records (id,production_date,product_id,product_json,group_id,mode,quantity,original_quantity,status,submitted_by,submitted_at,updated_at,version,request_id,payload_hash,revision_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(id,productionDate,p.id,JSON.stringify(p),groupId,'crew',qty,qty,'pending',user.id,stamp,stamp,1,recordRequest,requestHash,stamp);
+    for(const workerId of memberIds)this.db.prepare('INSERT INTO members VALUES (?,?)').run(id,workerId);
+    const r=this.get(user,id);this.audit(r,user,'submit',{},this.snapshot(r),'组长填写班组产量及参与人员');return this.view(r);
+   });
+   this.db.prepare('INSERT OR IGNORE INTO leader_requests VALUES (?,?,?)').run(user.id,requestId,requestHash);
+   if(!old)rememberWorkers(this.db,user,memberIds);return rows;
+  });
+ }
  insertBatchRecord(user,input){
   const productionDate=date(input.date);if(productionDate>today()||productionDate<earliestFillDate())fail(400,'只能填写最近7天（含今天）的生产数量');
   const raw=this.db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(input.productId);if(!raw||!raw.unit)fail(400,'请选择已配置单位的产品');
@@ -92,6 +130,7 @@ export class BatchProductionService extends ProductionService{
   const hash=createHash('sha256').update(JSON.stringify([productionDate,p.id,groupId,mode,workerId,shift,batchCode,qty,remark])).digest('hex');
   const existing=this.db.prepare('SELECT * FROM records WHERE submitted_by=? AND request_id=?').get(user.id,requestId);
   if(existing){if(existing.payload_hash!==hash)fail(409,'重复提交内容不一致，请重新填写');return this.view(existing);}
+  if(p.category==='预制块'&&this.annotate(this.rawList({from:productionDate,to:productionDate})).some(r=>r.counted&&r.mode==='crew'&&r.product.id===p.id&&r.groupId===groupId))fail(409,'该产品已按班组填写，请使用预制块的产品及生产人员填写方式');
   this.assertNoHistoricalOverlap({date:productionDate,productId:p.id,groupId,memberIds:[workerId],quantity:qty});
   if(this.db.prepare('SELECT 1 FROM attendance WHERE user_id=? AND production_date=?').get(workerId,productionDate))fail(400,'该工人当天已标记整天休息或停产，请先取消标记');
   const id=randomUUID(),stamp=now();
@@ -118,7 +157,7 @@ export class BatchProductionService extends ProductionService{
    const p=productId===r.product_id&&before.product.unit?before.product:productView(raw);if(!p.unit)fail(400,'请先确认产品的计量单位');
    const groupId=input.groupId??r.group_id;if(!this.db.prepare('SELECT 1 FROM groups WHERE id=?').get(groupId)||(p.groupId&&p.groupId!==groupId)||(p.category==='浇注料'&&groupId!=='g4')||(p.category==='装/卸车'&&groupId!=='g5')||(p.category==='预制块'&&['g4','g5'].includes(groupId)))fail(400,'产品和班组不匹配');
    const mode=p.category!=='预制块'?'personal':r.mode,memberIds=input.memberIds??before.memberIds;if(!Array.isArray(memberIds)||(mode!=='historical-group'&&!memberIds.length)||memberIds.length>100||new Set(memberIds).size!==memberIds.length)fail(400,'请选择实际生产工人');
-   if((!['shared','historical-group'].includes(mode)||p.category!=='预制块')&&memberIds.length!==1)fail(400,'逐人记录只能归属一名工人');
+   if((!['shared','historical-group','crew'].includes(mode)||p.category!=='预制块')&&memberIds.length!==1)fail(400,'逐人记录只能归属一名工人');
    for(const workerId of memberIds){if(!this.db.prepare("SELECT 1 FROM users WHERE id=? AND role='worker'").get(workerId))fail(400,'工人不存在');if(this.db.prepare('SELECT 1 FROM attendance WHERE user_id=? AND production_date=?').get(workerId,productionDate))fail(400,'该工人当天已标记整天休息或停产');}
    const fields=batchFields({shift:input.shift??r.shift,batchCode:input.batchCode??r.batch_code},false),qty=quantity(input.quantity??r.quantity,p,true),remark=text(input.remark??r.remark,'备注',300,false),reason=text(input.reason,'修改原因',300);
    this.assertNoHistoricalOverlap({date:productionDate,productId:p.id,groupId,memberIds,sourceRef:r.source_ref,id,quantity:qty});

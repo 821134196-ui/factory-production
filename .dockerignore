@@ -1,5 +1,8 @@
 node_modules
 private-data
+恢复初始化数据*.cjs
+.initial-data-restore-*
+compose.override.yaml
 public-release
 server/source-data
 server/templates

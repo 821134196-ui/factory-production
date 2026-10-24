@@ -17,6 +17,8 @@
 真实人员、手机号、客户、产品、工资单价、业务规则及 Excel 模板放在 private-data/；数据库和附件放在 data/；密钥放在本地 .env 配置中。这些目录和文件均不提交 Git、不进入 Docker 镜像。
 
 - npm run privacy:backup：生成仅本地保存的完整私有备份包。
+- npm run privacy:init-script：生成轻量的单文件私有初始化脚本；新电脑在项目根目录执行 node 恢复初始化数据.cjs，即可恢复业务数据及本地短信配置。
+- Linux Docker 迁移：在新项目根目录以 root 执行 node 恢复初始化数据.cjs --docker，再执行 docker compose up -d --build --wait；脚本自动设置文件权限和数据库挂载。无需在宿主机安装 Node.js 的恢复方式见 DOCKER.md。
 - node scripts/privacy.js restore --from 备份包路径 --target 新项目目录：校验并恢复资料，不覆盖已有私有资料或数据库。
 - npm run privacy:check：检查待发布文件，不输出敏感内容。
 - npm run privacy:release：生成不带旧 Git 历史的干净代码目录。

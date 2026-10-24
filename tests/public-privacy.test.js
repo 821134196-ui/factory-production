@@ -41,3 +41,15 @@ test('历史检查能发现已在最新版本删除的私有资料',async t=>{
  git(['init','-q']);fs.mkdirSync(path.join(root,'private-data'));fs.writeFileSync(path.join(root,'private-data','accounts.json'),'[]');git(['add','.']);git(['commit','-qm','fixture']);git(['rm','-q','private-data/accounts.json']);git(['commit','-qm','remove fixture']);
  const report=await scanHistory({root});assert.ok(report.problems.some(p=>p.file==='private-data/accounts.json'));
 });
+
+test('历史中的旧未知账号占位断言不误报，新提交、其他位置和真实资料仍被拦截',async t=>{
+ const root=directory(t),file='tests/public-system.test.js',phone='1'+'9'.repeat(10);
+ const content=`assert.equal((await f.req('/api/auth/login',null,'POST',{phone:'${phone}',code:'666888'})).status,403);`;
+ const scan=(text,extra={})=>scanPublic({root,files:[file],readFile:()=>Buffer.from(text),...extra});
+ assert.equal((await scan(content)).problems.length,1);
+ assert.equal((await scan(content,{historical:true})).problems.length,0);
+ assert.equal((await scan(content,{historical:true,sensitiveValues:[phone]})).problems.length,1);
+ assert.equal((await scan(content+`\nconst leakedPhone='${phone}';`,{historical:true})).problems.length,1);
+ assert.equal((await scan(content.replace(phone,'138'+'0000'+'1111'),{historical:true})).problems.length,1);
+ assert.equal((await scanPublic({root,files:['other-test.js'],historical:true,readFile:()=>Buffer.from(content)})).problems.length,1);
+});
