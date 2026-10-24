@@ -24,6 +24,7 @@
     "stock:import": "node --env-file-if-exists=.env scripts/import-opening-stock.js --apply",
     "stock:import:local": "node --env-file=.env.local scripts/import-opening-stock.js --apply",
     "privacy:backup": "node --env-file-if-exists=.env scripts/privacy.js backup",
+    "privacy:init-script": "node --env-file-if-exists=.env scripts/create-initial-data-script.js",
     "privacy:restore": "node scripts/privacy.js restore",
     "privacy:check": "node scripts/privacy.js check",
     "privacy:release": "node scripts/privacy.js release",

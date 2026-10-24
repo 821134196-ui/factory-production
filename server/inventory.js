@@ -51,10 +51,10 @@ export class InventoryService{
   const records=this.production.annotate(this.production.rawList({from:report.from,to:report.to})).filter(r=>r.counted&&r.product.id===id);
   for(const r of records){const d=daily.get(r.date)||{date:r.date,kind:'production',quantity:0,workers:new Set(),records:[]};d.quantity=round(d.quantity+convert(r.quantity,r.product.unit),6);r.members.forEach(m=>d.workers.add(m.name));d.records.push({id:r.id,quantity:convert(r.quantity,r.product.unit),members:r.members,submittedName:r.submittedName});daily.set(r.date,d);}
   const flows=[...daily.values()].map(d=>({...d,workers:[...d.workers]}));
-  for(const s of this.list(user,{from:report.from,to:report.to}))for(const e of s.entries.filter(e=>e.product.id===id))flows.push({date:s.date,kind:'shipment',shipmentId:s.id,customer:s.customer,quantity:convert(e.quantity,e.product.unit),workers:[]});
+  for(const s of this.list(user,{from:report.from,to:report.to}))for(const e of s.entries.filter(e=>e.product.id===id))flows.push({date:s.date,kind:'shipment',shipmentId:s.id,customer:s.customer,vehicleNumber:s.vehicleNumber,submittedName:s.createdByName,quantity:convert(e.quantity,e.product.unit),workers:[]});
   flows.sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==='production'?-1:1)-(b.kind==='production'?-1:1));
   let balance=row.opening;for(const f of flows){if(balance!==null)balance=round(balance+(f.kind==='production'?f.quantity:-f.quantity),6);f.balance=balance;}
-  return {from:report.from,to:report.to,product:p,opening:row.opening,balance:row.balance,produced:row.produced,shipped:row.shipped,flows};
+  return {from:report.from,to:report.to,product:p,opening:row.opening,balance:row.balance,produced:row.produced,shipped:row.shipped,issue:row.issue,flows};
  }
  summary(user,q={}){
   readAccess(user);const {from,to}=this.production.range(q),products=this.products(),openings=new Map(this.db.prepare('SELECT * FROM inventory_openings').all().map(r=>[r.product_id,r])),earliest=[from,...[...openings.values()].map(o=>o.start_date)].sort()[0];

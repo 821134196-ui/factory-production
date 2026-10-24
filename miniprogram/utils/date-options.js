@@ -1,2 +1,3 @@
-function dateOptions(boot,current){const dates=[...boot.fillDates];if(current&&!dates.includes(current))dates.push(current);return dates.map((id,i)=>{const d=new Date(id+'T00:00:00Z');return {id,name:id===boot.today?'今天':i===1?'昨天':id,detail:Number(id.slice(5,7))+'月'+Number(id.slice(8))+'日 '+['周日','周一','周二','周三','周四','周五','周六'][d.getUTCDay()]};});}
-module.exports=dateOptions;
+function dateLabel(id,today){if(id===today)return id.slice(5)+' 今天';const yesterday=new Date(today+'T00:00:00Z');yesterday.setUTCDate(yesterday.getUTCDate()-1);return id===yesterday.toISOString().slice(0,10)?id.slice(5)+' 昨天':id;}
+function dateOptions(boot,current){const dates=[...(boot.fillDates||[])];if(current&&!dates.includes(current))dates.push(current);return dates.map(id=>({id,name:dateLabel(id,boot.today)}));}
+module.exports=dateOptions;module.exports.dateLabel=dateLabel;

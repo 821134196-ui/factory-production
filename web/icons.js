@@ -14,6 +14,7 @@ export const iconPaths={
  checkCircle:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
  alertCircle:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4h.01"/>',
  restart:'<path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7"/>',
+ close:'<path d="m6 6 12 12M18 6 6 18"/>',
  left:'<path d="m15 5-7 7 7 7"/>',right:'<path d="m9 5 7 7-7 7"/>'
 };
 export function icon(name,extra=''){return `<svg class="app-icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${iconPaths[name]||iconPaths.records}</svg>`;}

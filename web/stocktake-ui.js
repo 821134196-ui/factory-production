@@ -1,5 +1,6 @@
 import {fullProductName,productFields} from './product-label.js';
 import {icon} from './icons.js';
+import {stockFlowDetail} from './stock-flow-ui.js';
 
 export const stocktakeStatus={pending:'待盘点',confirmed:'已确认',error:'错误'};
 const statusIcons={pending:'clock',confirmed:'checkCircle',error:'alertCircle'};
@@ -35,11 +36,6 @@ export function requireStocktakeView(data,view){
  return data;
 }
 export function stocktakeDetail(data,{esc,num}){
- const value=v=>v===null?(data.issue==='历史单位需核对'?'待核对':'待设置'):num(v)+' '+esc(data.product.unit),row=data.review,previous=!data.view||data.view==='previous',net=data.view==='month';
- return `<div class="stocktake-detail-head"><span class="small">${esc(data.from)} 至 ${esc(data.to)}</span>${previous?statusBadge(row.status):''}</div>${previous?reviewed(row,esc):''}${previous&&row.stale?'<p class="stocktake-updated">数据已更新，请重新盘点</p>':''}
- ${net?'<p class="small stocktake-period-note">当月库存＝本月生产－发货，不含月初库存。</p>':`<div class="stocktake-opening summary"><span>月初库存</span><b>${value(data.opening)}</b></div>`}
- ${previous?'':`<div class="stocktake-totals"><div class="summary"><span>本月生产</span><b>${value(data.produced)}</b></div><div class="summary"><span>本月发货</span><b>${value(data.shipped)}</b></div></div>`}
- <div class="stocktake-timeline">${data.flows.map(f=>`<details class="stocktake-flow"><summary><span>${esc(f.date)}<small>${f.kind==='production'?'生产':esc(f.customer)+' · 发货'}</small></span><span><b>${f.kind==='production'?'+':'−'}${value(f.quantity)}</b><small>${net?'累计净增':'结存'} ${value(net?f.change:f.balance)}</small></span></summary><div class="stocktake-flow-body">${f.kind==='production'?(f.records||[]).map(r=>`<div class="summary"><span>${r.members.map(m=>esc(m.name)).join('、')||'人员待设置'}${r.submittedName?`<small>填写人：${esc(r.submittedName)}</small>`:''}</span><b>${value(r.quantity)}</b></div>`).join(''):`<p>客户：${esc(f.customer)}</p>`}</div></details>`).join('')||'<p class="empty">本月暂无生产和发货记录</p>'}</div>
- <div class="summary"><span>${previous?'上月剩余库存':net?'当月库存':'当前剩余库存'}</span><b>${value(net?data.change:data.balance)}</b></div>
- ${previous&&row.status!=='pending'?`<button class="secondary stocktake-reopen" data-action="stocktake-reopen" data-id="${esc(data.product.id)}">${icon('restart')}重新盘点</button>`:''}`;
+ const row=data.review,previous=!data.view||data.view==='previous';
+ return `${previous?`<div class="stocktake-detail-head">${statusBadge(row.status)}</div>${reviewed(row,esc)}${row.stale?'<p class="stocktake-updated">数据已更新，请重新盘点</p>':''}`:''}${stockFlowDetail(data,{esc,num})}${previous&&row.status!=='pending'?`<button class="secondary stocktake-reopen" data-action="stocktake-reopen" data-id="${esc(data.product.id)}">${icon('restart')}重新盘点</button>`:''}`;
 }
