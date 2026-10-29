@@ -6,6 +6,7 @@ import {fail,text,date,quantity,productView,round} from './service.js';
 import {today,now,transaction} from './db.js';
 import {hasPermission,assertPermission} from './permissions.js';
 import {loadingFields} from './loading.js';
+import {quantityToKg,quantityToTonnes,unitKg} from './material-units.js';
 
 export const canInventory=user=>hasPermission(user,'inventory')||hasPermission(user,'shipping')||(user?.role==='worker'&&!!(user.is_leader??user.isLeader));
 export const canReadShipping=user=>canInventory(user)||hasPermission(user,'review')||(user?.role==='worker'&&!!(user.is_leader??user.isLeader));
@@ -14,7 +15,7 @@ function writeShippingAccess(user){if(!canWriteShipping(user))fail(403,'没有�
 function shippingAccess(user){if(!canReadShipping(user))fail(403,'没有发货清单查看权限');}
 function readAccess(user){if(!canInventory(user)&&!hasPermission(user,'review'))fail(403,'没有库存查看权限');}
 const stockProduct=p=>['预制块','浇注料'].includes(p.category)&&!!p.unit;
-const tonnes=(p,q)=>p.unit==='吨'?q:p.unit==='公斤'?q/1000:p.weightKg?q*p.weightKg/1000:null;
+const tonnes=(p,q)=>quantityToTonnes(p,q);
 const shippingCustomers=readPrivateJson('shipping-customers.json',{customers:[]}).customers.map(({id,name})=>({id,name}));
 export class InventoryService{
  constructor(db,production,{initialize=true}={}){this.db=db;this.production=production;if(initialize)db.exec(`
@@ -47,11 +48,11 @@ export class InventoryService{
  setCount(user,input){assertPermission(user,'inventory');const p=this.product(input.productId),day=date(input.date),qty=quantity(input.quantity,p,true);if(day>today())fail(400,'不能盘点未来日期');return transaction(this.db,()=>{const old=this.db.prepare('SELECT * FROM inventory_counts WHERE product_id=? AND count_date=?').get(p.id,day);if(input.version!==(old?.version||0))fail(409,'盘点已被修改，请刷新');const reason=old?text(input.reason,'修改原因',300):'登记实盘数量';this.db.prepare('INSERT INTO inventory_counts VALUES (?,?,?,1) ON CONFLICT(product_id,count_date) DO UPDATE SET quantity=excluded.quantity,version=version+1').run(p.id,day,qty);const saved=this.db.prepare('SELECT * FROM inventory_counts WHERE product_id=? AND count_date=?').get(p.id,day);this.audit(user,'count',p.id+'|'+day,old||{},saved,reason);return saved;});}
  movements(user,id,q={}){
   readAccess(user);const report=this.summary(user,q),row=report.rows.find(r=>r.product.id===id);if(!row)fail(404,'库存产品不存在');
-  const p=row.product,convert=(qty,unit)=>{if(unit===p.unit)return qty;if(p.category==='浇注料'&&unit==='公斤'&&p.unit==='吨')return qty/1000;fail(400,'历史单位不一致，请先核对');},daily=new Map();
+  const p=row.product,convert=(qty,sourceProduct)=>{const kg=quantityToKg(sourceProduct,qty),targetKg=unitKg(p);if(kg===null||targetKg===null)fail(400,'历史单位不一致，请先核对');return kg/targetKg;},daily=new Map();
   const records=this.production.annotate(this.production.rawList({from:report.from,to:report.to})).filter(r=>r.counted&&r.product.id===id);
-  for(const r of records){const d=daily.get(r.date)||{date:r.date,kind:'production',quantity:0,workers:new Set(),records:[]};d.quantity=round(d.quantity+convert(r.quantity,r.product.unit),6);r.members.forEach(m=>d.workers.add(m.name));d.records.push({id:r.id,quantity:convert(r.quantity,r.product.unit),members:r.members,submittedName:r.submittedName});daily.set(r.date,d);}
+  for(const r of records){const d=daily.get(r.date)||{date:r.date,kind:'production',quantity:0,workers:new Set(),records:[]};d.quantity=round(d.quantity+convert(r.quantity,r.product),6);r.members.forEach(m=>d.workers.add(m.name));d.records.push({id:r.id,quantity:convert(r.quantity,r.product),members:r.members,submittedName:r.submittedName});daily.set(r.date,d);}
   const flows=[...daily.values()].map(d=>({...d,workers:[...d.workers]}));
-  for(const s of this.list(user,{from:report.from,to:report.to}))for(const e of s.entries.filter(e=>e.product.id===id))flows.push({date:s.date,kind:'shipment',shipmentId:s.id,customer:s.customer,vehicleNumber:s.vehicleNumber,submittedName:s.createdByName,quantity:convert(e.quantity,e.product.unit),workers:[]});
+  for(const s of this.list(user,{from:report.from,to:report.to}))for(const e of s.entries.filter(e=>e.product.id===id))flows.push({date:s.date,kind:'shipment',shipmentId:s.id,customer:s.customer,vehicleNumber:s.vehicleNumber,submittedName:s.createdByName,quantity:convert(e.quantity,e.product),workers:[]});
   flows.sort((a,b)=>a.date.localeCompare(b.date)||(a.kind==='production'?-1:1)-(b.kind==='production'?-1:1));
   let balance=row.opening;for(const f of flows){if(balance!==null)balance=round(balance+(f.kind==='production'?f.quantity:-f.quantity),6);f.balance=balance;}
   return {from:report.from,to:report.to,product:p,opening:row.opening,balance:row.balance,produced:row.produced,shipped:row.shipped,issue:row.issue,flows};
@@ -64,9 +65,9 @@ export class InventoryService{
   const counts=new Map(this.db.prepare('SELECT * FROM inventory_counts WHERE count_date=?').all(to).map(r=>[r.product_id,r]));
   const rows=products.map(p=>{
    const initial=openings.get(p.id),o=initial&&initial.start_date<=to?initial:null,count=counts.get(p.id);
-   let invalid=false;const convert=(q,unit)=>{if(unit===p.unit)return q;if(p.category==='浇注料'&&p.unit==='吨'&&unit==='公斤')return q/1000;invalid=true;return 0;};
-   const produced=(start,end)=>round(production.filter(r=>r.product.id===p.id&&r.date>=start&&r.date<=end).reduce((n,r)=>n+convert(r.quantity,r.product.unit),0),6);
-   const shipped=(start,end)=>round(shipments.filter(s=>s.date>=start&&s.date<=end).reduce((n,s)=>n+s.entries.filter(e=>e.product.id===p.id).reduce((v,e)=>v+convert(e.quantity,e.product.unit),0),0),6);
+   let invalid=false;const convert=(q,sourceProduct)=>{const kg=quantityToKg(sourceProduct,q),targetKg=unitKg(p);if(kg===null||targetKg===null){invalid=true;return 0;}return kg/targetKg;};
+   const produced=(start,end)=>round(production.filter(r=>r.product.id===p.id&&r.date>=start&&r.date<=end).reduce((n,r)=>n+convert(r.quantity,r.product),0),6);
+   const shipped=(start,end)=>round(shipments.filter(s=>s.date>=start&&s.date<=end).reduce((n,s)=>n+s.entries.filter(e=>e.product.id===p.id).reduce((v,e)=>v+convert(e.quantity,e.product),0),0),6);
    const before=new Date(from+'T00:00:00Z');before.setUTCDate(before.getUTCDate()-1);const prior=before.toISOString().slice(0,10);
    const anchorPrior=new Date((o?.start_date||from)+'T00:00:00Z');anchorPrior.setUTCDate(anchorPrior.getUTCDate()-1);const anchorEnd=anchorPrior.toISOString().slice(0,10);const beginning=o?round(o.start_date<=from?o.quantity+produced(o.start_date,prior)-shipped(o.start_date,prior):o.quantity-produced(from,anchorEnd)+shipped(from,anchorEnd),6):null,productionQuantity=produced(from,to),shippingQuantity=shipped(from,to),balance=beginning===null?null:round(beginning+productionQuantity-shippingQuantity,6);
    return {product:p,initial:initial?{startDate:initial.start_date,quantity:initial.quantity,version:initial.version}:null,opening:invalid?null:beginning,produced:productionQuantity,shipped:shippingQuantity,balance:invalid?null:balance,weightTonnes:balance===null||invalid?null:tonnes(p,balance),physical:count?.quantity??null,countVersion:count?.version||0,difference:count&&balance!==null&&!invalid?round(p.category==='预制块'?count.quantity-balance:balance-count.quantity,6):null,differenceLabel:p.category==='预制块'?'实盘－账面':'账面－实盘',issue:invalid?'历史单位需核对':!o?'期初库存待设置':''};

@@ -2,6 +2,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { now, today, transaction, insertNotice } from './db.js';
 import {permissionsOf,isSuper,assertProductionRead,assertRecordAction,hasPermission} from './permissions.js';
 import {loadingFields} from './loading.js';
+import {quantityToKg} from './material-units.js';
 export function fail(status, message) { const error=new Error(message);error.status=status;throw error; }
 export function text(value, label, max=120, required=true) { if(typeof value!=='string'||value.trim().length>max||(required&&!value.trim()))fail(400,`${label}填写不正确`);return value.trim(); }
 export function date(value) {
@@ -18,7 +19,7 @@ export function quantity(value,p,allowZero=false) {
 export class ProductionService {
   constructor(db){this.db=db;}
   members(id){return this.db.prepare('SELECT u.id,u.name,u.group_id groupId FROM members m JOIN users u ON u.id=m.user_id WHERE record_id=? ORDER BY u.name').all(id);}
-  view(r){const original=JSON.parse(r.product_json),p={...original,...loadingFields(original)};return {id:r.id,date:r.production_date,product:p,groupId:r.group_id,mode:r.mode,quantity:r.quantity,originalQuantity:r.original_quantity,weightKg:p.weightKg?round(r.quantity*p.weightKg):p.unit==='公斤'?r.quantity:p.unit==='吨'?round(r.quantity*1000):null,status:r.status,submittedBy:r.submitted_by,submittedName:this.db.prepare('SELECT name FROM users WHERE id=?').get(r.submitted_by)?.name,submittedAt:r.submitted_at,updatedAt:r.updated_at,version:r.version,remark:r.remark,rejectionReason:r.rejection_reason,members:this.members(r.id)};}
+  view(r){const original=JSON.parse(r.product_json),p={...original,...loadingFields(original)};return {id:r.id,date:r.production_date,product:p,groupId:r.group_id,mode:r.mode,quantity:r.quantity,originalQuantity:r.original_quantity,weightKg:(()=>{const kg=quantityToKg(p,r.quantity);return kg===null?null:round(kg)})(),status:r.status,submittedBy:r.submitted_by,submittedName:this.db.prepare('SELECT name FROM users WHERE id=?').get(r.submitted_by)?.name,submittedAt:r.submitted_at,updatedAt:r.updated_at,version:r.version,remark:r.remark,rejectionReason:r.rejection_reason,members:this.members(r.id)};}
   get(user,id){assertProductionRead(user);const r=this.db.prepare("SELECT * FROM records WHERE id=? AND deleted_at=''").get(id);if(!r)fail(404,'记录不存在或已删除');if(user.role!=='admin'&&r.submitted_by!==user.id&&!this.members(id).some(m=>m.id===user.id))fail(403,'只能查看自己的记录');return r;}
   history(user,id){this.get(user,id);return this.db.prepare('SELECT h.*,u.name actor FROM history h LEFT JOIN users u ON u.id=h.actor_id WHERE record_id=? ORDER BY created_at,id').all(id).map(h=>({id:h.id,actor:h.actor,action:h.action,before:JSON.parse(h.before_json),after:JSON.parse(h.after_json),reason:h.reason,time:h.created_at}));}
   range(q={}){const from=date(q.from||today()),to=date(q.to||from);if(from>to||Date.parse(to)-Date.parse(from)>366*864e5)fail(400,'查询时间范围最多一年');return {from,to};}

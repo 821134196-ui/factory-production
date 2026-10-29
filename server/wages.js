@@ -6,6 +6,7 @@ import {now,today,transaction} from './db.js';
 import {assertPermission,isSuper} from './permissions.js';
 import {wageBreakdown} from './wage-breakdown.js';
 import {precastSupplements} from './precast-wage-rules.js';
+import {wageBasisForProduct,materialUnitSpec,configuredMaterialIds} from './material-units.js';
 const source=readPrivateJson('wage-source.json',{});
 function month(value){if(typeof value!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)||value>today().slice(0,7))fail(400,'工资月份不正确');return value;}
 function money(value){if(typeof value!=='number'||!Number.isFinite(value)||Math.abs(value)>1e9||Math.abs(value*100-Math.round(value*100))>0.0001)fail(400,'金额最多2位小数');return round(value,2);}
@@ -16,6 +17,13 @@ export class WageService{
    CREATE TABLE IF NOT EXISTS wage_adjustments (worker_id TEXT NOT NULL REFERENCES users(id),production_date TEXT NOT NULL,amount REAL NOT NULL,reason TEXT NOT NULL,PRIMARY KEY(worker_id,production_date));
    CREATE TABLE IF NOT EXISTS wage_history (id TEXT PRIMARY KEY,actor_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL,target TEXT NOT NULL,before_json TEXT NOT NULL,after_json TEXT NOT NULL,created_at TEXT NOT NULL);`);
   db.exec("UPDATE wage_rates SET month=month||'-01' WHERE length(month)=7");
+  if(!db.prepare("SELECT 1 FROM app_meta WHERE key='material_unit_wage_v1'").get())transaction(db,()=>{
+   for(const id of configuredMaterialIds()){
+    const raw=source[id],spec=materialUnitSpec(id);
+    db.prepare("UPDATE wage_rates SET basis='quantity',rate=COALESCE(?,rate) WHERE product_id=?").run(raw?.rawRate??null,id);
+   }
+   db.prepare("INSERT INTO app_meta VALUES ('material_unit_wage_v1','done')").run();
+  });
   db.prepare("INSERT OR IGNORE INTO app_meta VALUES ('wage_policy_v1',?)").run(JSON.stringify(initialWagePolicy));
   if(!db.prepare("SELECT 1 FROM app_meta WHERE key='precast_source_wages_v2'").get())transaction(db,()=>{
    const before=this.policy(),after={...before,precastMode:'crew'};
@@ -26,10 +34,11 @@ export class WageService{
   });
  }
  policy(day){const base=JSON.parse(this.db.prepare("SELECT value FROM app_meta WHERE key='wage_policy_v1'").get()?.value||'{"precastMode":"pending","precastRate":0,"materialMultiplier":null,"supplementsConfirmed":false}');if(!day)return base;const dated=this.db.prepare('SELECT policy_json FROM wage_policy_dates WHERE effective_date<=? ORDER BY effective_date DESC LIMIT 1').get(day);return dated?{...base,...JSON.parse(dated.policy_json)}:base;}
- rate(product,period){const day=period.length===7?period+'-31':period;const own=this.db.prepare('SELECT * FROM wage_rates WHERE product_id=? AND month<=? ORDER BY month DESC LIMIT 1').get(product.id,day);if(own)return {rate:own.rate,basis:own.basis,source:'总管理员配置（'+own.month+'起）'};
+ rate(product,period){const day=period.length===7?period+'-31':period;const own=this.db.prepare('SELECT * FROM wage_rates WHERE product_id=? AND month<=? ORDER BY month DESC LIMIT 1').get(product.id,day);if(own)return {rate:own.rate,basis:wageBasisForProduct(product)==='quantity'?'quantity':own.basis,source:'总管理员配置（'+own.month+'起）'};
   if(product.category==='预制块'){const policy=this.policy(day);return policy.precastMode==='pending'?null:{rate:policy.precastRate,basis:'tonne',source:'预制块基础工资'};}
-  const raw=source[product.id];if(!raw||raw.rawRate===null||raw.rawRate===undefined)return {rate:0,basis:'tonne',source:'未设置单价，暂按0元/吨'};
+  const raw=source[product.id],basis=wageBasisForProduct(product);if(!raw||raw.rawRate===null||raw.rawRate===undefined)return {rate:0,basis,source:basis==='quantity'?'未设置单价，暂按0元/当前单位':'未设置单价，暂按0元/吨'};
   if(product.category==='装/卸车')return {rate:raw.rawRate,basis:'tonne',source:'配置 '+raw.sourceCell};
+  if(basis==='quantity')return {rate:raw.rawRate,basis,source:'配置 '+raw.sourceCell+'，按'+product.unit+'计价'};
   const factor=this.policy(day).materialMultiplier;return factor===null?null:{rate:raw.rawRate*factor,basis:'tonne',source:'配置 '+raw.sourceCell+'，已换算元/吨'};
  }
  config(user,period=today().slice(0,7)){if(!isSuper(user))fail(403,'只有总管理员可以设置工资');month(period);return {month:period,effectiveDate:today(),policy:this.policy(today()),products:this.db.prepare('SELECT * FROM products WHERE active=1 ORDER BY category,name,spec').all().map(productView).map(p=>({...p,rate:this.rate(p,period===today().slice(0,7)?today():period),originalRate:source[p.id]?.rawRate??null})),workers:this.db.prepare("SELECT id,name FROM users WHERE active=1 AND role='worker' ORDER BY name").all()};}

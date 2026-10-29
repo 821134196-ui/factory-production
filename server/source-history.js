@@ -67,7 +67,7 @@ export async function readSourceHistory(db,{month,precast,material,countDate,all
   }
   for(let day=1;day<=days;day++){
    const col=day+5,tonnes=scalar(s.getCell(spec.loadingRow,col)),allocated=[],marked=[];
-   if(allocateMarkedLoading)for(let row=spec.staffStart;row<=spec.staffEnd;row++)if(attendanceMarked(scalar(s.getCell(row,col))))marked.push(row);
+   if(allocateMarkedLoading)for(let row=spec.staffStart;row<=spec.staffEnd;row++){const raw=scalar(s.getCell(row,col));if(typeof raw==='string'&&attendanceMarked(raw))marked.push(row);}
    for(let row=spec.staffStart;row<=spec.staffEnd;row++){
     const raw=scalar(s.getCell(row,col)),amount=allocateMarkedLoading&&marked.includes(row)&&number(tonnes)?tonnes*5/marked.length:raw;if(!number(amount)||amount===0)continue;
     const name=scalar(s.getCell(row,5)),worker=workbooks.workerByName(name),cell=s.getCell(row,col).address;

@@ -1,5 +1,6 @@
 import {InventoryService,canInventory} from './inventory.js';
 import {round,fail} from './service.js';
+import {quantityToKg} from './material-units.js';
 import {shippingHeaderRows} from './workbook-layout.js';
 
 // Monthly stock uses the same product rows and units as the source workbooks.
@@ -10,14 +11,14 @@ export function patchInventoryTemplate(db,production,user,{wb,month,days,categor
  else for(let row=604;row<=639;row++)patch(wb.worksheets[0].name,'B'+row,null);
  if(!canInventory(user))return;
  const inventory=new InventoryService(db,production),from=month+'-01',to=month+'-'+String(days).padStart(2,'0'),report=inventory.summary(user,{from,to,category}),shipments=inventory.list(user,{from,to,category}).reverse();
- const weight=(p,q)=>q===null?null:round(p.unit==='吨'?q*1000:p.unit==='公斤'?q:q*(p.weightKg||0),6);
+ const weight=(p,q)=>q===null?null:round(quantityToKg(p,q),6);
  const sum=(items,key)=>items.some(r=>r[key]===null)?null:round(items.reduce((n,r)=>n+r[key],0),6);
  if(category==='浇注料'){
   const s=wb.worksheets[0];if(shipments.length>36)fail(400,'本月浇注料发货超过原表36行，请导出库存明细');
   patch(s.name,'B4','期初库存（吨）');
   for(let row=604;row<=639;row++)patch(s.name,'B'+row,null);
   for(const r of report.rows){const col=Number(r.product.id.replace('material-',''));if(!Number.isInteger(col)||col<3||col>72)continue;patch(s.name,cellName(col,4),r.opening===null?'待设置':r.opening);patch(s.name,cellName(col,640),r.shipped);patch(s.name,cellName(col,641),r.balance===null?'待设置':r.balance);patch(s.name,cellName(col,642),r.physical);patch(s.name,cellName(col,643),r.difference);}
-  for(const [i,shipment]of shipments.entries()){const row=604+i;patch(s.name,'B'+row,Number(shipment.date.slice(-2))+'日 '+shipment.customer);for(const e of shipment.entries.filter(e=>e.product.category===category)){const col=Number(e.product.id.replace('material-',''));if(!Number.isInteger(col)||col<3||col>72)fail(400,'发货项目没有原表位置，请导出库存明细');patch(s.name,cellName(col,row),e.product.unit==='公斤'?e.quantity/1000:e.quantity);}}
+  for(const [i,shipment]of shipments.entries()){const row=604+i;patch(s.name,'B'+row,Number(shipment.date.slice(-2))+'日 '+shipment.customer);for(const e of shipment.entries.filter(e=>e.product.category===category)){const col=Number(e.product.id.replace('material-',''));if(!Number.isInteger(col)||col<3||col>72)fail(400,'发货项目没有原表位置，请导出库存明细');patch(s.name,cellName(col,row),e.quantity);}}
   patch(s.name,'B643','差异（账面－实盘）');return;
  }
  const segmentData=[];

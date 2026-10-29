@@ -122,8 +122,11 @@ export function createApp(config,{sendSms=createSmsSender(config)}={}){
  }
  app.post('/api/products',permission('products'),(req,res)=>upsertProduct(req,res));app.patch('/api/products/:id',permission('products'),(req,res)=>upsertProduct(req,res));
  function upsertProduct(req,res){const old=req.params.id?db.prepare('SELECT * FROM products WHERE id=?').get(req.params.id):null;if(req.params.id&&!old)fail(404,'产品不存在');const b={...(old?productView(old):{}),...req.body},name=text(b.name,'产品名称',100),unit=text(b.unit||'','单位',10,b.active!==false),spec=text(b.spec||'','规格',100,false),category=b.category,precision=b.precision??0,weight=b.weightKg??null,groupId=b.groupId||null;
-  if(category==='浇注料'&&!String(req.params.id||'').startsWith('material-demo')&&(unit!=='吨'||weight!==null))fail(400,'浇注料统一按吨填写，名称中的公斤不作为单重');
-  if(!['预制块','浇注料','装/卸车'].includes(category)||!Number.isInteger(precision)||precision<0||precision>3||(unit==='块'&&precision!==0)||(weight!==null&&(typeof weight!=='number'||!Number.isFinite(weight)||weight<=0)))fail(400,'分类、单重或小数位数不正确');if(groupId&&!db.prepare('SELECT 1 FROM groups WHERE id=?').get(groupId))fail(400,'班组不正确');if(category==='预制块'&&b.active!==false&&!weight)fail(400,'预制块需设置每块重量');const id=old?.id||randomUUID();
+  const validUnits=category==='浇注料'?['吨','袋','kg','公斤']:category==='预制块'?['块']:category==='装/卸车'?['吨']:[];
+  if(!validUnits.includes(unit))fail(400,'该分类的计量单位不正确');
+  if(category==='浇注料'&&['kg','公斤'].includes(unit)&&weight!==null)fail(400,'kg浇注料不需要固定单重');
+  if(category==='浇注料'&&unit==='袋'&&(!weight||typeof weight!=='number'))fail(400,'袋装浇注料需要设置每袋重量');
+  if(!['预制块','浇注料','装/卸车'].includes(category)||!Number.isInteger(precision)||precision<0||precision>3||(unit==='块'&&precision!==0)||(unit==='袋'&&precision!==0)||(unit==='kg'&&precision!==3)||(weight!==null&&(typeof weight!=='number'||!Number.isFinite(weight)||weight<=0)))fail(400,'分类、单重或小数位数不正确');if(groupId&&!db.prepare('SELECT 1 FROM groups WHERE id=?').get(groupId))fail(400,'班组不正确');if(category==='预制块'&&b.active!==false&&!weight)fail(400,'预制块需设置每块重量');const id=old?.id||randomUUID();
   db.prepare('INSERT INTO products VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,spec=excluded.spec,category=excluded.category,unit=excluded.unit,precision=excluded.precision,weight_kg=excluded.weight_kg,group_id=excluded.group_id,active=excluded.active').run(id,name,spec,category,unit,precision,weight,groupId,b.active===false?0:1,old?.source||'管理员配置');res.json({product:productView(db.prepare('SELECT * FROM products WHERE id=?').get(id))});
  }
  app.get('/api/export',permission('export'),async(req,res)=>{

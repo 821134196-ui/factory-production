@@ -1,5 +1,6 @@
 import {businessRules} from './private-data.js';
 import {transaction,now} from './db.js';
+import {materialUnitSpec,configuredMaterialIds} from './material-units.js';
 
 export const canonicalStaffName=value=>String(value??'').normalize('NFC').replace(/\s+/g,'').replace(/^(.+)$/,name=>businessRules.aliases?.[name]||name);
 export const crewLeaders=businessRules.crewLeaders||[];
@@ -30,15 +31,17 @@ export function applyFactoryRules(db,catalog){
  applyFullCatalog(db,catalog);
  applyLoadingModule(db);
  stripPersonalModuleLabels(db);
- if(db.prepare("SELECT 1 FROM app_meta WHERE key='factory_rules_tons_2_v1'").get())return;
- transaction(db,()=>{
-  mergeStaffAlias(db);
-  for(const p of catalog.filter(p=>p.category==='浇注料'))db.prepare("UPDATE products SET unit='吨',precision=2,weight_kg=NULL,active=CASE WHEN unit='' THEN ? ELSE active END,spec=CASE WHEN spec='计量单位待管理员确认' THEN ? ELSE spec END WHERE id=?").run(p.active?1:0,p.spec,p.id);
-  db.prepare("UPDATE products SET active=0 WHERE category='浇注料' AND id LIKE 'material-demo%'").run();
-  for(const [id,name]of crewLeaders){db.prepare('UPDATE groups SET name=? WHERE id=?').run(['一班','二班','三班'][Number(id.slice(1))-1]+'（'+name+'）',id);db.prepare("UPDATE users SET group_id=?,is_leader=1 WHERE name=? AND role='worker'").run(id,name);}
-  db.prepare("UPDATE groups SET name='浇注料（个人模块）' WHERE id='g4'").run();
-  db.prepare("INSERT INTO app_meta VALUES ('factory_rules_tons_2_v1','done')").run();
- });
+ if(!db.prepare("SELECT 1 FROM app_meta WHERE key='factory_rules_tons_2_v1'").get()){
+  transaction(db,()=>{
+   mergeStaffAlias(db);
+   for(const p of catalog.filter(p=>p.category==='浇注料'))db.prepare("UPDATE products SET unit='吨',precision=2,weight_kg=NULL,active=CASE WHEN unit='' THEN ? ELSE active END,spec=CASE WHEN spec='计量单位待管理员确认' THEN ? ELSE spec END WHERE id=?").run(p.active?1:0,p.spec,p.id);
+   db.prepare("UPDATE products SET active=0 WHERE category='浇注料' AND id LIKE 'material-demo%'").run();
+   for(const [id,name]of crewLeaders){db.prepare('UPDATE groups SET name=? WHERE id=?').run(['一班','二班','三班'][Number(id.slice(1))-1]+'（'+name+'）',id);db.prepare("UPDATE users SET group_id=?,is_leader=1 WHERE name=? AND role='worker'").run(id,name);}
+   db.prepare("UPDATE groups SET name='浇注料（个人模块）' WHERE id='g4'").run();
+   db.prepare("INSERT INTO app_meta VALUES ('factory_rules_tons_2_v1','done')").run();
+  });
+ }
+ applyMaterialUnits(db);
 }
 
 // 页面和导出直接展示业务模块名称，隐藏内部模块标记。
@@ -77,5 +80,34 @@ function applyFullCatalog(db,catalog){
  transaction(db,()=>{
   for(const p of catalog)db.prepare('UPDATE products SET active=1,spec=? WHERE id=?').run(p.spec,p.id);
   db.prepare("INSERT INTO app_meta VALUES ('full_source_catalog_v1','done')").run();
+ });
+}
+
+
+function patchProductSnapshots(value){
+ if(Array.isArray(value))return value.map(patchProductSnapshots);
+ if(!value||typeof value!=='object')return value;
+ const out={};
+ for(const [key,val] of Object.entries(value))out[key]=patchProductSnapshots(val);
+ const product=out.product&&typeof out.product==='object'?out.product:out;
+ const spec=productUnitSpec(product);
+ if(spec&&product.id){product.unit=spec.unit;product.precision=spec.precision;product.weightKg=spec.weightKg;product.weight_kg=spec.weightKg;}
+ return out;
+}
+function productUnitSpec(product){return product?.id?materialUnitSpec(product.id):null;}
+function patchJson(raw){try{return JSON.stringify(patchProductSnapshots(JSON.parse(raw)));}catch{return raw;}}
+function hasTable(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
+function applyMaterialUnits(db){
+ if(db.prepare("SELECT 1 FROM app_meta WHERE key='material_units_v1'").get())return;
+ transaction(db,()=>{
+  for(const id of configuredMaterialIds()){
+   const spec=materialUnitSpec(id); if(!spec)continue;
+   db.prepare('UPDATE products SET unit=?,precision=?,weight_kg=? WHERE id=?').run(spec.unit,spec.precision,spec.weightKg,id);
+  }
+  if(hasTable(db,'records'))for(const row of db.prepare('SELECT id,product_json FROM records').all())db.prepare('UPDATE records SET product_json=? WHERE id=?').run(patchJson(row.product_json),row.id);
+  if(hasTable(db,'shipments'))for(const row of db.prepare('SELECT id,entries_json FROM shipments').all())db.prepare('UPDATE shipments SET entries_json=? WHERE id=?').run(patchJson(row.entries_json),row.id);
+  if(hasTable(db,'imports'))for(const row of db.prepare('SELECT id,entries_json FROM imports').all())db.prepare('UPDATE imports SET entries_json=? WHERE id=?').run(patchJson(row.entries_json),row.id);
+  if(hasTable(db,'history'))for(const row of db.prepare('SELECT id,before_json,after_json FROM history').all())db.prepare('UPDATE history SET before_json=?,after_json=? WHERE id=?').run(patchJson(row.before_json),patchJson(row.after_json),row.id);
+  db.prepare("INSERT INTO app_meta VALUES ('material_units_v1','done')").run();
  });
 }

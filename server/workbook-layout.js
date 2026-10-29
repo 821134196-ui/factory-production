@@ -4,7 +4,7 @@ export function inputValue(cell){
  if(value&&typeof value==='object')return value.richText?.map(t=>t.text).join('')??null;
  return value;
 }
-export const attendanceMarked=value=>typeof value==='string'&&/^[.\s*＊]+$/.test(value)&&/[*＊]/.test(value);
+export const attendanceMarked=value=>value===1||typeof value==='string'&&/^[.\s*＊]+$/.test(value)&&/[*＊]/.test(value);
 
 export function shippingHeaderRows(sheet,index){
  const first=index===0?52:41,last=index===0?85:74,start=[27,25,22][index];

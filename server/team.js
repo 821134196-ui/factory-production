@@ -11,17 +11,18 @@ export function sortedWorkers(db,user){
 export function rememberWorkers(db,user,ids){initializeTeam(db);for(const id of new Set(ids))db.prepare('INSERT INTO frequent_workers VALUES (?,?,1,?) ON CONFLICT(leader_id,worker_id) DO UPDATE SET uses=uses+1,last_used=excluded.last_used').run(user.id,id,now());}
 const empty=()=>['预制块','浇注料','装车','卸车'].map(name=>({name,unit:name==='预制块'?'块':'吨',quantity:0,referenceQuantity:0,confirmed:0,pendingCount:0,weightKg:0,referenceWeightKg:0,items:[]}));
 function metrics(service,records){
- const result=empty(),pending=new Map(),itemMaps=new Map(result.map(m=>[m.name,new Map()])),latest=records;
+ const result=empty(),pending=new Map(),itemMaps=new Map(result.map(m=>[m.name,new Map()])),latest=records,unitsByCategory=new Map(result.map(m=>[m.name,new Set()]));
  for(const r of latest.filter(r=>r.counted)){
   const name=r.product.loadingOperation||r.product.category,m=result.find(m=>m.name===name);if(!m)continue;
-  const quantity=m.unit==='吨'&&r.product.unit==='公斤'?r.quantity/1000:r.quantity;
+  const quantity=r.quantity;
+  unitsByCategory.get(name)?.add(r.product.unit);
   const isGroupTotal=['shared','historical-group','crew'].includes(r.mode),key=r.product.loadingOperation?name:`${r.product.id}|${r.product.unit}${isGroupTotal?'|group':''}`;
   if(isGroupTotal){m.referenceQuantity=round(m.referenceQuantity+quantity);m.referenceWeightKg=round(m.referenceWeightKg+(r.weightKg||0));}else{m.quantity=round(m.quantity+quantity);m.weightKg=round(m.weightKg+(r.weightKg||0));}
-  const items=itemMaps.get(name),item=items.get(key)||{id:key,name:r.product.loadingOperation||r.product.fullName||r.product.name||r.product.spec,productTitle:r.product.productTitle||r.product.name,productDetail:r.product.productDetail??r.product.spec??'',isGroupTotal,unit:m.unit,quantity:0,count:0,weightKg:0};
+  const items=itemMaps.get(name),item=items.get(key)||{id:key,name:r.product.loadingOperation||r.product.fullName||r.product.name||r.product.spec,productTitle:r.product.productTitle||r.product.name,productDetail:r.product.productDetail??r.product.spec??'',isGroupTotal,unit:r.product.unit,quantity:0,count:0,weightKg:0};
   item.quantity=round(item.quantity+quantity);item.count+=1;item.weightKg=round(item.weightKg+(r.weightKg||0));items.set(key,item);
  }
- for(const r of records){const name=r.product.loadingOperation||r.product.category,m=result.find(m=>m.name===name);if(!m)continue;if(r.counted&&r.status==='approved'&&!['shared','historical-group','crew'].includes(r.mode)){m.confirmed=round(m.confirmed+(m.unit==='吨'&&r.product.unit==='公斤'?r.quantity/1000:r.quantity));}if(r.status==='pending')pending.set(name,(pending.get(name)||0)+1);}
- for(const m of result){m.pendingCount=pending.get(m.name)||0;m.items=[...itemMaps.get(m.name).values()];m.isGroupTotal=!!m.items.length&&m.items.every(item=>item.isGroupTotal);}
+ for(const r of records){const name=r.product.loadingOperation||r.product.category,m=result.find(m=>m.name===name);if(!m)continue;if(r.counted&&r.status==='approved'&&!['shared','historical-group','crew'].includes(r.mode)){m.confirmed=round(m.confirmed+r.quantity);}if(r.status==='pending')pending.set(name,(pending.get(name)||0)+1);}
+ for(const m of result){m.pendingCount=pending.get(m.name)||0;m.items=[...itemMaps.get(m.name).values()];const units=[...unitsByCategory.get(m.name)];if(units.length===1)m.unit=units[0];else if(units.length>1)m.unit='多单位';m.isGroupTotal=!!m.items.length&&m.items.every(item=>item.isGroupTotal);}
  return result;
 }
 export function productionOverview(db,service,user,q={}){

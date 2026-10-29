@@ -8,6 +8,7 @@ import {WorkbookService} from './workbooks.js';
 import {initializeSourceHistory,readSourceHistory,importSourceExtras} from './source-history.js';
 import {inputValue,attendanceMarked} from './workbook-layout.js';
 import {round,quantity,productView} from './service.js';
+import {wageBasisForProduct,quantityToTonnes} from './material-units.js';
 
 export const bundledMonth=readPrivateJson('source-data/current.json',{month:''}).month;
 export const replacementKey='workbook_dataset_v1';
@@ -109,14 +110,17 @@ export function applyWorkbookReplacement(f,plan,{backupFile=null}={}){
   }
   const resolvedExtras={...plan.extras,loading:plan.extras.loading.map(e=>({...e,workerId:remapWorker(e.workerId)})),adjustments:plan.extras.adjustments.map(e=>({...e,workerId:remapWorker(e.workerId)}))};
   const extras=importSourceExtras(f.db,f.service,f.inventory,user,resolvedExtras);
-  for(const r of plan.rates)service.wages.setRate(user,{...r,basis:'tonne',effectiveDate:plan.manifest.month+'-01'});
+  for(const r of plan.rates){
+    const product=plan.products.find(p=>p.id===r.productId);
+    service.wages.setRate(user,{...r,basis:wageBasisForProduct(product),effectiveDate:plan.manifest.month+'-01'});
+   }
   for(const entry of plan.attendance){const ref=JSON.stringify([plan.manifest.month,'出勤',entry.sheet,entry.date]),resolved={...entry,members:entry.members.map(m=>({...m,id:remapWorker(m.id)}))};f.db.prepare('INSERT INTO history_source_rows VALUES (?,?,?,?,?)').run(ref,'attendance',entry.groupId+'|'+entry.date,JSON.stringify(resolved),now());}
   const range={from:plan.manifest.month+'-01',to:plan.manifest.month+'-31'},records=f.service.list(user,range).filter(r=>r.counted);
   if(records.length!==plan.production.length+plan.extras.loading.length)throw new Error('生产记录数量未能对账，已回滚');
   const expected=new Map([...plan.production,...plan.extras.loading].map(e=>[e.sourceRef,e]));
   for(const r of records)if(!expected.has(r.sourceRef)||Math.abs(expected.get(r.sourceRef).quantity-r.quantity)>1e-6)throw new Error('来源数量未能对账，已回滚');
   const wages=service.wages.summary(user,range);if(wages.unallocatedCount||wages.unpricedCount)throw new Error('存在未归属或未计价的工资，已回滚');
-  const totals=new Map();for(const r of records){const category=r.product.loadingOperation||r.product.category,t=totals.get(category)||{category,records:0,quantity:0,unit:r.product.unit,tonnes:0};t.records++;t.quantity=round(t.quantity+r.quantity,6);t.tonnes=round(t.tonnes+(r.weightKg||0)/1000,6);totals.set(category,t);}
+  const totals=new Map();for(const r of records){const category=r.product.loadingOperation||r.product.category,t=totals.get(category)||{category,records:0,quantity:0,unit:r.product.unit,tonnes:0};const tonnes=quantityToTonnes(r.product,r.quantity);t.records++;t.quantity=round(t.quantity+r.quantity,6);t.tonnes=t.tonnes===null||tonnes===null?null:round(t.tonnes+tonnes,6);totals.set(category,t);}
   const inventory=f.inventory.summary(user,range),byProduct=new Map(inventory.rows.map(r=>[r.product.id,r]));
   for(const e of plan.extras.openings){const r=byProduct.get(e.productId);if(!r||r.opening!==e.quantity)throw new Error('期初库存未能对账，已回滚');}
   for(const r of inventory.rows)if(r.opening!==null&&Math.abs(r.balance-(r.opening+r.produced-r.shipped))>1e-6)throw new Error('库存流转未能对账，已回滚');
