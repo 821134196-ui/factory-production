@@ -171,6 +171,8 @@ dialog>.actions>button{flex:1 1 120px;min-width:0}
 .select-picker-heading>h2{margin:0;font-size:1em;line-height:1.5}
 .select-picker-close{flex:none;min-height:44px;padding:8px 0 8px 12px;margin:0;background:transparent;color:var(--brand);font-size:max(18px,.8em)}
 .select-picker .select-search-wrap{position:static;padding:12px 0}
+.select-picker .select-tabs{padding:4px 0 10px}
+.select-picker .select-tab{min-height:48px;font-size:1em}
 .select-picker .select-options{position:static;flex:1;min-height:0;max-height:none;width:100%;padding:8px 16px max(16px,env(safe-area-inset-bottom));margin:0;border:0;border-radius:0;box-shadow:none;overflow-y:auto;overscroll-behavior:contain;background:var(--panel)}
 .select-picker .select-options>[role=option]{margin:0;padding:14px 8px;border-radius:8px;border-bottom:1px solid var(--line);min-height:56px;font-size:1em}
 .select-picker .select-options>[role=option]:last-child{border-bottom:0}

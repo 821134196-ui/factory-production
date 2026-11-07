@@ -43,6 +43,11 @@ button{box-shadow:none}
 .select-options button{padding:12px;border-radius:8px}
 .select-check{width:22px;height:22px;font-size:14px;background:transparent;color:var(--brand)}
 .select-search{margin:0 0 6px!important;background:#fff!important}
+/* 产品选择页签：罐墙料/罐口料、浇注料/预制块 */
+.select-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:6px 0}
+.select-tab{flex:1 1 auto;min-height:44px;padding:8px 14px;border:1px solid #d5dfd9;border-radius:10px;background:#fff;color:var(--sub);font-size:max(17px,.85em);font-weight:500;line-height:1.3;cursor:pointer}
+.select-tab.is-active{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+.select-tab:focus-visible{outline:3px solid #11766d40;outline-offset:2px}
 .quantity-control{display:flex!important;align-items:center;gap:10px;border:1px solid #d5dfd9;border-radius:10px;padding-right:16px;margin:0!important;background:#fff}
 .quantity-control:focus-within{outline:3px solid #11766d40;outline-offset:2px}
 .quantity-control .quantity-input{border:0!important;background:transparent;min-width:0;flex:1;width:100%;font-size:1.2em!important;min-height:64px;padding:12px 14px;font-weight:550;outline:none}
