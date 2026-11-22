@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {orderByRecent, orderForCustomer, precastTab, storageKey, familyKey, allocateByBalance, prioritizeCustomer, normalizeProductName} from '../web/product-order.js';
-import {groupInventoryRows} from '../web/inventory-ui.js';
+import {orderByRecent, orderForCustomer, precastTab, storageKey, familyKey, allocateByBalance, prioritizeCustomer, normalizeProductName, skuKey, collapseSkuMembers} from '../web/product-order.js';
+import {groupInventoryRows, pickShipmentProduct} from '../web/inventory-ui.js';
+import {resolvePrecastGroup} from '../web/precast-ui.js';
 
 const products = [{id: 'a'}, {id: 'b'}, {id: 'c'}, {id: 'd'}];
 
@@ -34,15 +35,17 @@ test('最近使用记录按用户和场景隔离', () => {
   assert.notEqual(storageKey('u1', 'report:预制块'), storageKey('u1', 'ship:预制块'));
 });
 
-test('同一规格跨班组视为同一产品，规格不同则不合并', () => {
-  const base = {category: '预制块', name: '样例砖', spec: '62公斤/块', unit: '块', weightKg: 62};
-  assert.equal(familyKey({...base, groupId: 'g1'}), familyKey({...base, groupId: 'g2'}));
+test('不同班组的同规格预制块是不同 SKU，同班组才合并', () => {
+  const base = {category: '预制块', name: '样例砖', spec: '62公斤/块', unit: '块', weightKg: 62, groupId: 'g1'};
+  assert.notEqual(familyKey(base), familyKey({...base, groupId: 'g2'}));
+  assert.equal(familyKey(base), familyKey({...base, id: 'other'}));
   assert.notEqual(familyKey(base), familyKey({...base, weightKg: 60}));
 });
 
-test('灌口与罐口视为同一名称，空格忽略', () => {
-  const base = {category: '预制块', name: '样例罐口1#', spec: '197公斤/块', unit: '块', weightKg: 197};
-  assert.equal(familyKey(base), familyKey({...base, name: '样例灌口1#', groupId: 'g3'}));
+test('灌口与罐口视为同一名称，空格忽略（仅限同一班组）', () => {
+  const base = {category: '预制块', name: '样例罐口1#', spec: '197公斤/块', unit: '块', weightKg: 197, groupId: 'g3'};
+  assert.equal(familyKey(base), familyKey({...base, name: '样例灌口1#'}));
+  assert.notEqual(familyKey(base), familyKey({...base, name: '样例灌口1#', groupId: 'g1'}));
   assert.equal(normalizeProductName(' 样例 灌口 1# '), '样例罐口1#');
 });
 
@@ -67,18 +70,52 @@ test('发货量按库存从多到少分摊，库存不足时余量记到库存�
   assert.deepEqual(allocateByBalance([], 5), []);
 });
 
-test('库存统计把同一规格的多个班组记录合并成一条并求和', () => {
+test('填报班组优先上次选择，其次登录人班组，最后第一个预制块班组', () => {
+  const groups = [{id: 'g1', name: '一班'}, {id: 'g2', name: '二班'}, {id: 'g3', name: '三班'}, {id: 'g4', name: '浇注料'}, {id: 'g5', name: '装卸'}];
+  assert.equal(resolvePrecastGroup(groups, 'g1', 'g2'), 'g2');
+  assert.equal(resolvePrecastGroup(groups, 'g1', 'g4'), 'g1');
+  assert.equal(resolvePrecastGroup(groups, 'g3', ''), 'g3');
+  assert.equal(resolvePrecastGroup(groups, null, ''), 'g1');
+  assert.equal(resolvePrecastGroup([], null, ''), 'g3');
+});
+
+test('发货产品按名称规格跨班组合并成一个选项，班组单独选', () => {
+  const base = {category: '预制块', name: '样例砖', spec: '62公斤/块', unit: '块', weightKg: 62, groupId: 'g1'};
+  assert.equal(skuKey(base), skuKey({...base, groupId: 'g2'}));
+  assert.notEqual(familyKey(base), familyKey({...base, groupId: 'g2'}));
+});
+
+test('发货 SKU 按班组去重，同班组灌/罐写法只保留一条', () => {
+  const base = {category: '预制块', name: '样例罐口1#', spec: '197公斤/块', unit: '块', weightKg: 197};
+  const products = [{...base, id: 'a', groupId: 'g1'}, {...base, id: 'b', groupId: 'g2'}, {...base, id: 'c', groupId: 'g1', name: '样例灌口1#'}];
+  const members = [...collapseSkuMembers(products).values()][0];
+  assert.equal(members.length, 2);
+  assert.equal(members.find((member) => member.groupId === 'g1').id, 'a');
+});
+
+test('发货班组解析：优先所选班组，其次登录人班组，最后第一个', () => {
+  const members = [{id: 'x', groupId: 'g1'}, {id: 'y', groupId: 'g2'}];
+  assert.equal(pickShipmentProduct(members, 'g2', 'g1').id, 'y');
+  assert.equal(pickShipmentProduct(members, '', 'g1').id, 'x');
+  assert.equal(pickShipmentProduct(members, '', 'g3').id, 'x');
+  assert.equal(pickShipmentProduct([], 'g1', 'g1'), null);
+});
+
+test('库存统计只合并同班组的同规格记录，不同班组保持分开', () => {
   const product = {category: '预制块', name: '样例砖', spec: '62公斤/块', unit: '块', weightKg: 62};
   const rows = [
-    {product: {...product, id: 'a', groupId: 'g1'}, balance: 10, opening: 5, produced: 5, shipped: 0, weightTonnes: 0.62, physical: null, difference: null, issue: ''},
-    {product: {...product, id: 'b', groupId: 'g2'}, balance: 20, opening: 0, produced: 20, shipped: 0, weightTonnes: 1.24, physical: null, difference: null, issue: ''},
+    {product: {...product, id: 'a', groupId: 'g1', name: '样例罐口1#'}, balance: 10, opening: 5, produced: 5, shipped: 0, weightTonnes: 0.62, physical: null, difference: null, issue: ''},
+    {product: {...product, id: 'b', groupId: 'g1', name: '样例灌口1#'}, balance: 20, opening: 0, produced: 20, shipped: 0, weightTonnes: 1.24, physical: null, difference: null, issue: ''},
+    {product: {...product, id: 'c', groupId: 'g2'}, balance: 7, opening: 0, produced: 7, shipped: 0, weightTonnes: 0.434, physical: null, difference: null, issue: ''},
   ];
   const state = {boot: {groups: [{id: 'g1', name: '一班'}, {id: 'g2', name: '二班'}]}};
   const grouped = groupInventoryRows(rows, state);
-  assert.equal(grouped.length, 1);
-  assert.equal(grouped[0].balance, 30);
-  assert.equal(grouped[0].opening, 5);
-  assert.equal(grouped[0].produced, 25);
-  assert.equal(grouped[0].members.length, 2);
-  assert.match(grouped[0].issue, /合并显示/);
+  assert.equal(grouped.length, 2);
+  const merged = grouped.find((row) => row.members);
+  assert.equal(merged.balance, 30);
+  assert.equal(merged.opening, 5);
+  assert.equal(merged.produced, 25);
+  assert.equal(merged.members.length, 2);
+  assert.match(merged.issue, /合并显示/);
+  assert.equal(grouped.find((row) => row.product.groupId === 'g2').balance, 7);
 });

@@ -143,8 +143,9 @@ dialog>.actions>button{flex:1 1 120px;min-width:0}
 @media(min-width:900px){.shell:not(.role-guest){padding-bottom:12px}.shell:not(.role-guest) .nav{margin:16px 30px}.shell:not(.role-guest) .body{padding-top:0}.role-guest .body{padding-top:24px}}
 
 /* Labels share a column and controls share a column throughout production entry. */
-.page-report .bulk-entry>.field,.page-report .precast-product-row>.field,.page-report .report-date-card>.field{display:grid;grid-template-columns:3.6em minmax(0,1fr);align-items:center;gap:10px}
-.page-report .bulk-entry>.field>span:first-child,.page-report .precast-product-row>.field>span:first-child{margin:0;line-height:1.5}
+.page-report .bulk-entry>.field,.page-report .precast-product-row>.field,.page-report .report-date-card>.field,.page-report .precast-group-field{display:grid;grid-template-columns:3.6em minmax(0,1fr);align-items:center;gap:10px}
+.page-report .bulk-entry>.field>span:first-child,.page-report .precast-product-row>.field>span:first-child,.page-report .precast-group-field>span:first-child,.page-report .report-date-card>.field>span:first-child{margin:0;line-height:1.5}
+.page-report .precast-group-field{margin:0 0 12px}
 .page-report .select-menu summary{min-height:52px;padding:10px;gap:8px}
 .page-report .quantity-control{gap:6px;padding-right:10px}
 .page-report .quantity-control>input:not([type=checkbox]):not([type=hidden]){min-height:52px;padding:10px}
@@ -195,11 +196,19 @@ html:has(dialog[open]) .shell:not(.role-guest)>.body{overflow:hidden}
 .inventory-date-toolbar{display:block;margin-bottom:12px}.inventory-date-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;font-size:max(18px,.85em)}
 .page-inventory .inventory-date-heading [data-action="stock-month"]{min-height:44px;padding:6px 0;margin:0;font-size:inherit;white-space:nowrap}
 .inventory-product-model{font-size:max(18px,.85em);color:var(--sub);font-weight:400}
+/* 预制块按班组区分：列表与选择处显示班组标签 */
+.product-group{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;background:#eaf4f1;color:var(--brand);font-size:max(15px,.68em);font-weight:500;line-height:1.6;white-space:nowrap;vertical-align:middle}
 #shipment-form>.field,#shipment-form .shipment-entry>.field{display:grid;grid-template-columns:3.4em minmax(0,1fr);gap:8px;align-items:center;margin:0 0 12px}
 #shipment-form .field>span:first-child{margin:0;font-size:max(18px,.78em);line-height:1.5}
 #shipment-form .field>.quantity-control{margin:0;font-size:1em;font-weight:400}
 #shipment-form .select-menu summary{min-height:52px;padding:10px;gap:8px}#shipment-form .select-date .select-title{font-size:max(18px,.85em);white-space:nowrap}
 #shipment-form .pump-upload{padding:12px;margin:0 0 12px}#shipment-form .shipment-entry{padding:12px 0;margin:0;border-top:1px solid var(--line)}
+/* 预制块发货时的班组选择 */
+.shipment-group{display:flex;align-items:center;gap:10px;margin:-2px 0 12px}
+.shipment-group-label{flex:none;font-size:max(18px,.78em);color:var(--sub)}
+.shipment-group-tabs{flex:1;display:flex;gap:6px;min-width:0}
+.shipment-group-tab{flex:1;min-width:0;min-height:44px;padding:6px 4px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--sub);font-size:max(16px,.72em);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shipment-group-tab.active{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
 #shipment-form .shipment-entry>.field:last-of-type{margin-bottom:0}#shipment-form .shipment-remove{display:block;width:auto;margin:8px 0 0 auto;min-height:44px;padding:6px 0}
 #shipment-form>[data-action="shipment-add"]{margin:0 0 12px}#shipment-form>.primary{margin:0}#shipment-form>.disclosure{margin:0 0 12px}
 #shipment-form>.field:last-of-type{margin-bottom:12px}

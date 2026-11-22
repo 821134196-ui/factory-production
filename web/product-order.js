@@ -60,14 +60,18 @@ export function prioritizeCustomer(products, customer) {
   return matched.length ? [...matched, ...products.filter((product) => !matched.includes(product))] : products;
 }
 
-// 同一规格的产品（如各班组分别入库的同一种砖）归为一组。
-// “灌口/罐口”按厂里习惯视为同一个字，避免发货时出现两条几乎一样的名称。
+// 同一规格、同一班组的产品（如“灌口/罐口”两种写法）归为一组。
+// 不同班组的同规格预制块是不同 SKU，不能合并。
 export function normalizeProductName(value) {
   return String(value ?? '').normalize('NFKC').replace(/\s+/g, '').replace(/灌/g, '罐');
 }
 
-export function familyKey(product) {
+export function skuKey(product) {
   return [product?.category, normalizeProductName(product?.name), normalizeProductName(product?.spec), product?.unit, product?.weightKg ?? ''].join('|');
+}
+
+export function familyKey(product) {
+  return [skuKey(product), product?.groupId ?? ''].join('|');
 }
 
 export function familyGroups(products) {
@@ -79,6 +83,22 @@ export function familyGroups(products) {
     groups.set(key, list);
   }
   return [...groups.values()];
+}
+
+// 发货选择用：按名称+规格跨班组归并，每个班组只保留一条（灌/罐写法优先用“罐”）。
+export function collapseSkuMembers(products) {
+  const bySku = new Map();
+  for (const product of products) {
+    const key = skuKey(product);
+    const byGroup = bySku.get(key) || new Map();
+    const existing = byGroup.get(product.groupId ?? '');
+    const canonical = (value) => (normalizeProductName(value) === value ? 0 : 1);
+    if (!existing || canonical(product.name) < canonical(existing.name)) byGroup.set(product.groupId ?? '', product);
+    bySku.set(key, byGroup);
+  }
+  const result = new Map();
+  for (const [key, byGroup] of bySku) result.set(key, [...byGroup.values()]);
+  return result;
 }
 
 // 按当前库存从多到少分摊发货量；库存不足时余量记到库存最多的一条。
