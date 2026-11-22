@@ -1,3 +1,4 @@
+import {openMySQL} from './mysql.js';
 import {privatePath,readPrivateJson} from './private-data.js';
 import {registerShipmentFiles} from './shipment-files.js';
 import {registerMonthlyStocktake} from './monthly-stocktake.js';
@@ -23,8 +24,8 @@ import {registerWageRoutes} from './wages.js';
 import {InventoryService,registerInventoryRoutes,canInventory} from './inventory.js';
 import {initializeTeam,sortedWorkers,productionOverview} from './team.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-export function createApp(config,{sendSms=createSmsSender(config)}={}){
- const db=openDatabase(config.dbPath),catalog=readPrivateJson('catalog.json',[]);checkDatabaseMode(db,config);const roster=readPrivateJson('staff-roster.json',[]);seed(db,config,catalog,roster);
+export function createApp(config,{sendSms=createSmsSender(config),db=config.dbDriver==='mysql'?openMySQL():openDatabase(config.dbPath)}={}){
+ const catalog=readPrivateJson('catalog.json',[]);checkDatabaseMode(db,config);const roster=readPrivateJson('staff-roster.json',[]);seed(db,config,catalog,roster);
  applyFactoryRules(db,catalog);
  initializePermissions(db,config);applyOfficialRoster(db,config,privatePath('accounts.json'));
  initializeTeam(db);

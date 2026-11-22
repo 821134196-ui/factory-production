@@ -5,6 +5,7 @@ export function configFromEnv(env = process.env) {
   const config = {
     demo:false, authMode:'sms', host: env.HOST || '127.0.0.1', port: Number(env.PORT || 3188),
     factoryName: env.FACTORY_NAME || '工厂生产记工',
+    dbDriver: env.DB_DRIVER || 'sqlite',
     dbPath: path.resolve(env.DB_PATH || './data/production.sqlite'),
     secret: env.APP_SECRET || '',
     universalLoginCode: env.UNIVERSAL_LOGIN_CODE || '',
@@ -20,6 +21,8 @@ export function configFromEnv(env = process.env) {
     },
     trustProxy: Number(env.TRUST_PROXY || 0)
   };
+  if (!['mysql','sqlite'].includes(config.dbDriver)) throw new Error('未知数据库驱动');
+  if (config.dbDriver==='mysql' && ['MYSQL_HOST','MYSQL_DATABASE','MYSQL_USER','MYSQL_PASSWORD'].some(k=>!env[k])) throw new Error('缺少 MySQL 连接配置');
   if (config.universalLoginCode && !/^\d{6}$/.test(config.universalLoginCode)) throw new Error('UNIVERSAL_LOGIN_CODE需为6位数字。');
   if (!['webhook','tencent'].includes(config.smsProvider)) throw new Error('SMS_PROVIDER需为tencent或webhook。');
   if (!['code','code,minutes'].includes(config.tencentSms.templateParams)) throw new Error('TENCENT_SMS_TEMPLATE_PARAMS需为code或code,minutes，与已审核模板变量对应。');

@@ -1,3 +1,4 @@
+if(process.env.DB_DRIVER==='mysql') throw new Error('该工具仅支持 SQLite 文件。MySQL 备份请使用 mysqldump。');
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';

@@ -15,3 +15,4 @@ USER node
 EXPOSE 3188
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD node -e "fetch('http://127.0.0.1:3188/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "scripts/docker-entrypoint.js"]
+COPY --chown=node:node scripts/migrate-to-mysql.js scripts/mysql-backup.js ./scripts/
