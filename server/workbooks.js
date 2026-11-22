@@ -165,7 +165,18 @@ export class WorkbookService{
    }
    for(const worker of workers){const offset=personOffsets.get(worker.id);if(offset===undefined)continue;for(let day=1;day<=31;day++)patch(s.name,'B'+(8+(day-1)*18+offset),worker.name);patch(s.name,'B'+(566+offset),worker.name);}
    patch(s.name,'A1',`${year}年 ${m}月 浇注料记工表（按产品计量单位填写）`);
-   for(const r of rows){if(r.members.length!==1)fail(400,'浇注料记录需要明确一名生产工人');const offset=personOffsets.get(r.members[0].id),sourceCol=/^material-\d+$/.test(r.product.id)?Number(r.product.id.slice(9)):null,col=sourceCol||mapping.get(norm(r.product.name));if(offset===undefined||!col)fail(400,'工人或项目没有表格位置：'+r.members[0].name+' / '+(r.product.fullName||r.product.name));if(!['吨','袋','kg','公斤'].includes(r.product.unit))fail(400,'历史计量单位无法导出，请管理员核对该记录：'+(r.product.fullName||r.product.name));const qty=r.quantity,address=cellName(col,8+(Number(r.date.slice(-2))-1)*18+offset);patch(s.name,address,round((patches.get(s.name)?.get(address)||0)+qty));}
+   const extras=[];
+   for(const r of rows){if(r.members.length!==1)fail(400,'浇注料记录需要明确一名生产工人');const offset=personOffsets.get(r.members[0].id),sourceCol=/^material-\d+$/.test(r.product.id)?Number(r.product.id.slice(9)):null,col=sourceCol||mapping.get(norm(r.product.name));if(offset===undefined)fail(400,'工人没有表格位置：'+r.members[0].name);if(!['吨','袋','kg','公斤'].includes(r.product.unit))fail(400,'历史计量单位无法导出，请管理员核对该记录：'+(r.product.fullName||r.product.name));if(!col){let entry=extras.find(item=>item.product.id===r.product.id);if(!entry){entry={product:r.product,records:[]};extras.push(entry);}entry.records.push({record:r,offset});continue;}const qty=r.quantity,address=cellName(col,8+(Number(r.date.slice(-2))-1)*18+offset);patch(s.name,address,round((patches.get(s.name)?.get(address)||0)+qty));}
+   // 原表没有列的新项目（后来在产品管理里新建的）放到表格最右侧，标注“补充”，不改变原有列。
+   let extraCol=77;
+   for(const entry of extras.sort((a,b)=>(a.product.fullName||a.product.name).localeCompare(b.product.fullName||b.product.name))){
+    const col=extraCol++,unit=entry.product.unit;
+    patch(s.name,cellName(col,5),[entry.product.spec,unit].filter(Boolean).join(' · '));patch(s.name,cellName(col,6),(entry.product.name||'')+'（补充）');
+    if(entry.product.weightKg)patch(s.name,cellName(col,7),round(entry.product.weightKg/1000));
+    for(const {record,offset} of entry.records){const address=cellName(col,8+(Number(record.date.slice(-2))-1)*18+offset);patch(s.name,address,round((patches.get(s.name)?.get(address)||0)+record.quantity));}
+    for(let offset=0;offset<18;offset++){let own=0;for(let day=1;day<=days;day++)own+=patches.get(s.name)?.get(cellName(col,8+(day-1)*18+offset))||0;patch(s.name,cellName(col,566+offset),round(own));}
+    let total=0;for(let offset=0;offset<18;offset++)total+=patches.get(s.name)?.get(cellName(col,566+offset))||0;patch(s.name,cellName(col,584),round(total));
+   }
    for(let day=1;day<=31;day++)patch(s.name,'A'+(8+(day-1)*18),day<=days?day:null);
    for(let col=3;col<=76;col++){let total=0;for(let offset=0;offset<18;offset++){let own=0;for(let day=1;day<=days;day++)own+=patches.get(s.name)?.get(cellName(col,8+(day-1)*18+offset))||0;patch(s.name,cellName(col,566+offset),round(own));total+=own;}patch(s.name,cellName(col,584),round(total));}
   }
@@ -225,7 +236,7 @@ export class WorkbookService{
     if(replacement==null)return '<c'+kept+'/>';return typeof replacement==='number'?'<c'+kept+'><v>'+replacement+'</v></c>':'<c'+kept+' t="inlineStr"><is><t>'+escapeXML(replacement)+'</t></is></c>';
    });
    // 表格空白的生产格仍带样式；新增值落到原行，避免移动版式。
-   for(const [address,value] of data){if(value==null)continue;const row=Number(address.match(/\d+$/)[0]),valueXml=typeof value==='number'?'<v>'+value+'</v>':'<is><t>'+escapeXML(value)+'</t></is>',type=typeof value==='number'?'':' t="inlineStr"',cell='<c r="'+address+'"'+type+'>'+valueXml+'</c>',rowPattern=new RegExp('(<row\\b[^>]*\\br="'+row+'"[^>]*>)([\\s\\S]*?)(</row>)');if(!rowPattern.test(xml))fail(500,'表格行不存在，无法保存导出');xml=xml.replace(rowPattern,(full,open,content,close)=>{const next=[...content.matchAll(/<c\b[^>]*\br="([A-Z]+\d+)"/g)].find(match=>columnIndex(match[1])>columnIndex(address)),at=next?next.index:content.length;return open+content.slice(0,at)+cell+content.slice(at)+close;});}
+   for(const [address,value] of data){if(value==null)continue;const row=Number(address.match(/\d+$/)[0]),valueXml=typeof value==='number'?'<v>'+value+'</v>':'<is><t>'+escapeXML(value)+'</t></is>',type=typeof value==='number'?'':' t="inlineStr"',rowPattern=new RegExp('(<row\\b[^>]*\\br="'+row+'"[^>]*>)([\\s\\S]*?)(</row>)');if(!rowPattern.test(xml))fail(500,'表格行不存在，无法保存导出');xml=xml.replace(rowPattern,(full,open,content,close)=>{const cells=[...content.matchAll(/<c\b([^>]*?)\/?>/g)].map(match=>match[1]).filter(attrs=>/\br="[A-Z]+\d+"/.test(attrs)).map(attrs=>({attrs,col:columnIndex(attrs.match(/\br="([A-Z]+\d+)"/)[1])})),before=cells.filter(item=>item.col<columnIndex(address)).pop(),style=before?.attrs.match(/\bs="\d+"/)?.[0],cell='<c r="'+address+'"'+(style?' '+style:'')+type+'>'+valueXml+'</c>',next=[...content.matchAll(/<c\b[^>]*\br="([A-Z]+\d+)"/g)].find(match=>columnIndex(match[1])>columnIndex(address)),at=next?next.index:content.length;return open+content.slice(0,at)+cell+content.slice(at)+close;});}
    zip.file(file,xml);
   }
   // 所有导出的生产合计由最新有效明细重新计算，不沿用表格的工资/库存公式。
